@@ -222,7 +222,6 @@ function computeEngine(draws, activeDate) {
   const month28Dates = new Set(uniqueDates.slice(-28));
   const month28Draws = ordered.filter(d => month28Dates.has(d.date));
 
-  // Evaluacion mensual (4 semanas / 28 dias)
   const freq28 = new Map();
   for (const item of CATALOGO_77) freq28.set(item.code, 0);
   for (const d of month28Draws) freq28.set(d.code, (freq28.get(d.code) || 0) + 1);
@@ -230,7 +229,6 @@ function computeEngine(draws, activeDate) {
   const maxFreq28 = Math.max(0, ...freq28.values());
   const monthlySignal = (month28Draws.length >= 168 && activeCodes28 >= 45 && maxFreq28 >= 7) ? 'ALTA' : 'BAJA';
 
-  // Frecuencias, presencia por dias y ultima aparicion en ventana de 7 dias
   const freq7 = new Map();
   const days7Presence = new Map();
   const lastIndexIn7 = new Map();
@@ -252,7 +250,6 @@ function computeEngine(draws, activeDate) {
   const openingToday = todayDraws.find(d => d.franja === '08:00 AM') || null;
   const closingToday = todayDraws.find(d => d.franja === '07:00 PM') || null;
 
-  // Simetria horaria opuesta en ventana de 7 dias
   const nextFranja = FRANJAS_12[Math.min(franjasCount, FRANJAS_12.length - 1)];
   const oppositeFranja = OPPOSITE_FRANJA[nextFranja] || '07:00 PM';
   const symCodes = new Set(
@@ -261,7 +258,6 @@ function computeEngine(draws, activeDate) {
       .map(d => d.code)
   );
 
-  // Secuencias directas A -> B y patrones latentes A -> _ -> C en ventana de 7 dias
   const seqTargets = new Set();
   const latentTargets = new Set();
   const anchorCode = lastDraw ? lastDraw.code : null;
@@ -278,7 +274,6 @@ function computeEngine(draws, activeDate) {
     }
   }
 
-  // Espejos y despejes de referencia
   const mirrorTargets = new Set();
   const despejeTargets = new Set();
   const referenceCodes = [
@@ -293,7 +288,6 @@ function computeEngine(draws, activeDate) {
     if (desp) despejeTargets.add(desp);
   }
 
-  // Auditoria de aciertos sobre pronosticos en dias cerrados previos
   let auditedHits = 0;
   let auditedDays = 0;
   for (let i = 1; i < uniqueDates.length; i++) {
@@ -388,7 +382,6 @@ function computeEngine(draws, activeDate) {
       reasons.push(`Ciclo/latencia (${gapDraws} sorteos)`);
     }
 
-    // Moderacion si señal mensual es BAJA para evitar sobreponderar frecuencias aisladas
     if (monthlySignal === 'BAJA' && f7 >= 3) {
       score -= 2;
       reasons.push('Moderación señal mensual BAJA');
@@ -435,7 +428,6 @@ function computeEngine(draws, activeDate) {
     if (cand.isAxis) axisCount += 1;
   }
 
-  // Seleccion autonoma de 1 a 3 fijas segun fuerza, densidad y balance
   const strongCandidates = blind6.filter(x => x.fuerte);
   let desiredFixedCount = 1;
   if (strongCandidates.length >= 4 && todayDraws.length > 0) {
@@ -488,6 +480,10 @@ function renderPage(state, message = '') {
   const statusText = state.closedAndRotated
     ? `Jornada ${state.currentDate} · 12/12 franjas · Estado: Cerrada y rotada`
     : `Jornada ${state.currentDate} · ${state.franjasCount}/12 franjas · Estado: En curso`;
+
+  const franjaOptions = FRANJAS_12.map(f =>
+    `<option value="${f}" ${f === nextFranja ? 'selected' : ''}>${f}</option>`
+  ).join('');
 
   const fijasHtml = state.fijas.map(f => `
     <div style="margin-bottom:10px;">
@@ -567,4 +563,148 @@ function renderPage(state, message = '') {
         <input id="fecha" name="fecha" type="text" value="${state.displayDate}" required />
 
         <label for="franja">Franja Horaria (12 Ciclos)</label>
-        <select id="franja" name="franja"
+        <select id="franja" name="franja">${franjaOptions}</select>
+
+        <label for="animal">Animal o Número (0, 00 o 01–75)</label>
+        <input id="animal" name="animal" type="text" placeholder="Ej: 12 Caballo o 00 Ballena" required />
+
+        <button type="submit">Guardar y Actualizar</button>
+      </form>
+      <div class="status">${statusText}</div>
+      <div class="subnote">${state.zeroDayDiagnostic}</div>
+    </div>
+
+    <div class="card">
+      <h2>Carga Rápida por Lote</h2>
+      <form method="POST" action="/registrar-lote">
+        <label for="lote_fecha">Fecha por defecto (opcional si viene en cada línea)</label>
+        <input id="lote_fecha" name="lote_fecha" type="text" value="${state.displayDate}" />
+
+        <label for="lote_texto">Una línea por sorteo (ej: 08:00 AM - 12 Caballo)</label>
+        <textarea id="lote_texto" name="lote_texto" placeholder="08:00 AM - 12 Caballo&#10;09:00 AM - 05 León"></textarea>
+
+        <button type="submit" class="secondary">Procesar Lote</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Fijas del Día</h2>
+      ${fijasHtml}
+    </div>
+
+    <div class="card">
+      <h2>Pronóstico Blindado (Top 6)</h2>
+      <ol>${blindHtml}</ol>
+    </div>
+
+    <div class="card">
+      <h2>Candidatos de Apertura / Rotación</h2>
+      <div>${openingHtml || '<span class="subnote">Sin candidatos pendientes</span>'}</div>
+    </div>
+
+    <div class="card">
+      <h2>Ventanas y Auditoría</h2>
+      <div class="grid-stats">
+        <div class="stat-box">
+          <div class="subnote">Ventana 7d</div>
+          <div class="stat-val">${state.window7Count} sorteos</div>
+        </div>
+        <div class="stat-box">
+          <div class="subnote">Señal 28d</div>
+          <div class="stat-val">${state.monthlySignal} (${state.month28Count})</div>
+        </div>
+        <div class="stat-box">
+          <div class="subnote">Histórico total</div>
+          <div class="stat-val">${state.totalDraws} registros</div>
+        </div>
+        <div class="stat-box">
+          <div class="subnote">Auditoría días cerrados</div>
+          <div class="stat-val">${state.auditedHits}/${state.auditedDays}</div>
+        </div>
+      </div>
+      <div class="disclaimer">Nota: Cada sorteo es un evento aleatorio independiente; las métricas y ponderaciones evalúan patrones descriptivos sin garantizar resultados futuros.</div>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+app.get('/manifest.json', (req, res) => {
+  res.json({
+    name: 'Guácharo Master Pro',
+    short_name: 'Guácharo Pro',
+    start_url: '/',
+    display: 'standalone',
+    background_color: '#090e1a',
+    theme_color: '#0b1120'
+  });
+});
+
+app.get('/', (req, res) => {
+  const draws = loadHistory();
+  const state = computeEngine(draws, req.query.fecha ? normalizeDateStr(req.query.fecha) : null);
+  res.send(renderPage(state));
+});
+
+app.post('/registrar', (req, res) => {
+  const draws = loadHistory();
+  const date = normalizeDateStr(req.body.fecha);
+  const franja = FRANJAS_12.includes(req.body.franja) ? req.body.franja : '08:00 AM';
+  const animal = normalizeAnimal(req.body.animal);
+
+  if (!animal) {
+    const state = computeEngine(draws, date);
+    return res.status(400).send(renderPage(state, 'Animal o código no reconocido en el catálogo de 77 entradas.'));
+  }
+
+  const filtered = draws.filter(d => !(d.date === date && d.franja === franja));
+  filtered.push({ date, franja, code: animal.code, name: animal.name });
+  saveHistory(filtered);
+
+  const state = computeEngine(filtered, date);
+  res.send(renderPage(state, `Registrado ${date} ${franja} -> ${animal.code} ${animal.name}.`));
+});
+
+app.post('/registrar-lote', (req, res) => {
+  const draws = loadHistory();
+  const defaultDate = normalizeDateStr(req.body.lote_fecha);
+  const lines = String(req.body.lote_texto || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  let added = 0;
+
+  for (const line of lines) {
+    const franjaMatch = line.match(/\b(0?[89]|1[0-2]|0?1|0?2|0?3|0?4|0?5|0?6|0?7):00\s*(AM|PM)\b/i);
+    let franja = FRANJAS_12[Math.min(draws.filter(d => d.date === defaultDate).length, FRANJAS_12.length - 1)];
+    if (franjaMatch) {
+      const hr = String(parseInt(franjaMatch[1], 10)).padStart(2, '0');
+      const ap = franjaMatch[2].toUpperCase();
+      const candFranja = `${hr}:00 ${ap}`;
+      if (FRANJAS_12.includes(candFranja)) franja = candFranja;
+    }
+
+    const dateMatch = line.match(/\b(\d{2,4}[/-]\d{1,2}[/-]\d{2,4})\b/);
+    const date = dateMatch ? normalizeDateStr(dateMatch[1]) : defaultDate;
+
+    const cleanedForAnimal = line
+      .replace(/\b(\d{2,4}[/-]\d{1,2}[/-]\d{2,4})\b/g, '')
+      .replace(/\b(0?[89]|1[0-2]|0?1|0?2|0?3|0?4|0?5|0?6|0?7):00\s*(AM|PM)\b/gi, '')
+      .replace(/^[\s\-–—:|]+|[\s\-–—:|]+$/g, '')
+      .trim();
+
+    const animal = normalizeAnimal(cleanedForAnimal) || normalizeAnimal(line);
+    if (animal) {
+      const idx = draws.findIndex(d => d.date === date && d.franja === franja);
+      const entry = { date, franja, code: animal.code, name: animal.name };
+      if (idx >= 0) draws[idx] = entry;
+      else draws.push(entry);
+      added += 1;
+    }
+  }
+
+  saveHistory(draws);
+  const state = computeEngine(draws, defaultDate);
+  res.send(renderPage(state, `Lote procesado: ${added} sorteo(s) guardado(s).`));
+});
+
+app.listen(PORT, () => {
+  console.log(`Guácharo Master Pro (V2.9.10) escuchando en puerto ${PORT}`);
+});
