@@ -5,6 +5,12 @@
       "franja": "08:00 AM",
       "code": "02",
       "name": "Toro"
+    },
+      {
+      "date": "2026-11-26",
+      "franja": "09:00 AM",
+      "code": "00",
+      "name": "Ballena"
     }
   ]
 }
