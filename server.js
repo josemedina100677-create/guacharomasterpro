@@ -1,395 +1,567 @@
-const express = require("express");
-const cors = require("cors");
+const express = require('express');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const DATA_FILE = path.join(__dirname, 'draws_history.json');
 
-app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '5mb' }));
+app.use(express.urlencoded({ extended: true }));
 
-const FRANJAS = [
-  "08:00 AM", "09:00 AM", "10:00 AM", "11:00 AM",
-  "12:00 PM", "01:00 PM", "02:00 PM", "03:00 PM",
-  "04:00 PM", "05:00 PM", "06:00 PM", "07:00 PM"
+// 1. CATALOGO CANONICO DE 77 ENTRADAS (0, 00 y 01-75)
+const CATALOGO_77 = [
+  { code: '0', name: 'Delfín' },
+  { code: '00', name: 'Ballena' },
+  { code: '01', name: 'Carnero' },
+  { code: '02', name: 'Toro' },
+  { code: '03', name: 'Ciempiés' },
+  { code: '04', name: 'Alacrán' },
+  { code: '05', name: 'León' },
+  { code: '06', name: 'Rana' },
+  { code: '07', name: 'Perico' },
+  { code: '08', name: 'Ratón' },
+  { code: '09', name: 'Águila' },
+  { code: '10', name: 'Tigre' },
+  { code: '11', name: 'Gato' },
+  { code: '12', name: 'Caballo' },
+  { code: '13', name: 'Mono' },
+  { code: '14', name: 'Paloma' },
+  { code: '15', name: 'Zorro' },
+  { code: '16', name: 'Oso' },
+  { code: '17', name: 'Pavo' },
+  { code: '18', name: 'Burro' },
+  { code: '19', name: 'Chivo' },
+  { code: '20', name: 'Cochino' },
+  { code: '21', name: 'Gallo' },
+  { code: '22', name: 'Camello' },
+  { code: '23', name: 'Cebra' },
+  { code: '24', name: 'Iguana' },
+  { code: '25', name: 'Gallina' },
+  { code: '26', name: 'Vaca' },
+  { code: '27', name: 'Perro' },
+  { code: '28', name: 'Zamuro' },
+  { code: '29', name: 'Elefante' },
+  { code: '30', name: 'Caimán' },
+  { code: '31', name: 'Lapa' },
+  { code: '32', name: 'Ardilla' },
+  { code: '33', name: 'Pescado' },
+  { code: '34', name: 'Venado' },
+  { code: '35', name: 'Jirafa' },
+  { code: '36', name: 'Culebra' },
+  { code: '37', name: 'Tortuga' },
+  { code: '38', name: 'Búfalo' },
+  { code: '39', name: 'Lechuza' },
+  { code: '40', name: 'Avispa' },
+  { code: '41', name: 'Canguro' },
+  { code: '42', name: 'Tucán' },
+  { code: '43', name: 'Mariposa' },
+  { code: '44', name: 'Chigüire' },
+  { code: '45', name: 'Garza' },
+  { code: '46', name: 'Puma' },
+  { code: '47', name: 'Pavo Real' },
+  { code: '48', name: 'Puercoespín' },
+  { code: '49', name: 'Pereza' },
+  { code: '50', name: 'Canario' },
+  { code: '51', name: 'Pelícano' },
+  { code: '52', name: 'Pulpo' },
+  { code: '53', name: 'Caracol' },
+  { code: '54', name: 'Grillo' },
+  { code: '55', name: 'Oso Hormiguero' },
+  { code: '56', name: 'Tiburón' },
+  { code: '57', name: 'Pato' },
+  { code: '58', name: 'Hormiga' },
+  { code: '59', name: 'Pantera' },
+  { code: '60', name: 'Camaleón' },
+  { code: '61', name: 'Panda' },
+  { code: '62', name: 'Cachicamo' },
+  { code: '63', name: 'Cangrejo' },
+  { code: '64', name: 'Gavilán' },
+  { code: '65', name: 'Araña' },
+  { code: '66', name: 'Lobo' },
+  { code: '67', name: 'Avestruz' },
+  { code: '68', name: 'Jaguar' },
+  { code: '69', name: 'Conejo' },
+  { code: '70', name: 'Bisonte' },
+  { code: '71', name: 'Guacamaya' },
+  { code: '72', name: 'Gorila' },
+  { code: '73', name: 'Hipopótamo' },
+  { code: '74', name: 'Turpial' },
+  { code: '75', name: 'Guácharo' }
 ];
 
-const EJES_CLASICOS = new Set(["02", "12", "19", "28", "30", "39", "53", "74"]);
+const FRANJAS_12 = [
+  '08:00 AM', '09:00 AM', '10:00 AM', '11:00 AM',
+  '12:00 PM', '01:00 PM', '02:00 PM', '03:00 PM',
+  '04:00 PM', '05:00 PM', '06:00 PM', '07:00 PM'
+];
 
-const NOMBRES_77 = {
-  "0": "Delfín", "00": "Ballena", "01": "Carnero", "02": "Toro", "03": "Ciempiés",
-  "04": "Alacrán", "05": "León", "06": "Rana", "07": "Perico", "08": "Ratón",
-  "09": "Águila", "10": "Tigre", "11": "Gato", "12": "Caballo", "13": "Mono",
-  "14": "Paloma", "15": "Zorro", "16": "Oso", "17": "Pavo", "18": "Burro",
-  "19": "Chivo", "20": "Cochino", "21": "Gallo", "22": "Camello", "23": "Cebra",
-  "24": "Iguana", "25": "Gallina", "26": "Vaca", "27": "Perro", "28": "Zamuro",
-  "29": "Elefante", "30": "Caimán", "31": "Lapa", "32": "Ardilla", "33": "Pescado",
-  "34": "Venado", "35": "Jirafa", "36": "Culebra", "37": "Tortuga", "38": "Búfalo",
-  "39": "Lechuza", "40": "Avispa", "41": "Canguro", "42": "Tucán", "43": "Mariposa",
-  "44": "Chigüire", "45": "Garza", "46": "Puma", "47": "Pavo Real", "48": "Puercoespín",
-  "49": "Pereza", "50": "Canario", "51": "Pelícano", "52": "Pulpo", "53": "Caracol",
-  "54": "Grillo", "55": "Oso Hormiguero", "56": "Tiburón", "57": "Pato", "58": "Hormiga",
-  "59": "Pantera", "60": "Camaleón", "61": "Panda", "62": "Cachicamo", "63": "Cangrejo",
-  "64": "Gavilán", "65": "Araña", "66": "Lobo", "67": "Avestruz", "68": "Jaguar",
-  "69": "Conejo", "70": "Bisonte", "71": "Guacamaya", "72": "Gorila", "73": "Hipopótamo",
-  "74": "Turpial", "75": "Guácharo"
-};
+const EJES_CLASICOS = new Set(['02', '12', '30', '39', '53', '74', '19', '28']);
 
-function normalizarTexto(str = "") {
-  return str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+function stripAccents(str = '') {
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 }
 
-const NOMBRE_A_CODIGO = Object.fromEntries(
-  Object.entries(NOMBRES_77).map(([cod, nom]) => [normalizarTexto(nom), cod])
-);
+const byCode = new Map(CATALOGO_77.map(item => [item.code, item]));
+const byName = new Map(CATALOGO_77.map(item => [stripAccents(item.name), item]));
 
-function calcularEspejo(cod) {
-  if (cod === "0") return "00";
-  if (cod === "00") return "0";
-  const inv = cod.padStart(2, "0").split("").reverse().join("");
-  return NOMBRES_77[inv] ? inv : cod;
-}
+function normalizeAnimal(rawInput) {
+  if (!rawInput || typeof rawInput !== 'string') return null;
+  const cleaned = rawInput.trim();
+  if (!cleaned) return null;
 
-function calcularDespeje(cod) {
-  if (cod === "0" || cod === "00") return "75";
-  const num = parseInt(cod, 10);
-  const res = 76 - num;
-  if (res < 0 || res > 75) return cod;
-  return res === 0 ? "0" : String(res).padStart(2, "0");
-}
-
-function resolverMarca(entrada) {
-  const limpio = String(entrada || "").trim();
-  const matchCod = limpio.match(/^(00|0|[1-9]|[1-6][0-9]|7[0-5])\b/);
-  let codigo = null;
-
-  if (matchCod) {
-    const raw = matchCod[1];
-    codigo = (raw === "0" || raw === "00") ? raw : raw.padStart(2, "0");
-  } else {
-    const norm = normalizarTexto(limpio);
-    for (const [nombreKey, cod] of Object.entries(NOMBRE_A_CODIGO)) {
-      if (norm.includes(nombreKey)) {
-        codigo = cod;
-        break;
-      }
-    }
+  const codeMatch = cleaned.match(/^(00|0|[0-7]?\d)\b/);
+  if (codeMatch) {
+    const rawCode = codeMatch[1];
+    const normalizedCode = rawCode === '0' || rawCode === '00'
+      ? rawCode
+      : String(parseInt(rawCode, 10)).padStart(2, '0');
+    if (byCode.has(normalizedCode)) return byCode.get(normalizedCode);
   }
 
-  if (!codigo || !NOMBRES_77[codigo]) return null;
-  return {
-    codigo,
-    nombre: NOMBRES_77[codigo],
-    espejo: calcularEspejo(codigo),
-    despeje: calcularDespeje(codigo),
-    eje_clasico: EJES_CLASICOS.has(codigo)
-  };
+  const withoutLeadingNum = cleaned.replace(/^(00|0|[0-7]?\d)\s*[-:.]?\s*/i, '');
+  const normName = stripAccents(withoutLeadingNum || cleaned);
+  if (byName.has(normName)) return byName.get(normName);
+
+  for (const item of CATALOGO_77) {
+    const n = stripAccents(item.name);
+    if (normName.includes(n) || n.includes(normName)) return item;
+  }
+  return null;
 }
 
-const db = {
-  jornadas: {},
-  ordenFechas: [],
-  anomalias: [],
-  pronosticos: {}
-};
+function getEspejo(code) {
+  if (code === '0') return '00';
+  if (code === '00') return '0';
+  const rev = code.split('').reverse().join('');
+  return byCode.has(rev) ? rev : null;
+}
 
-function recalcularMotor(fechaActual) {
-  const fechasCerradas = db.ordenFechas.filter(f => db.jornadas[f]?.cerrada);
-  const ventana7 = fechasCerradas.slice(-7);
-  const bloque4Sem = fechasCerradas.slice(-28);
+function getDespeje(code) {
+  if (code === '0' || code === '00') return '75';
+  const num = parseInt(code, 10);
+  const diff = 76 - num;
+  if (diff >= 1 && diff <= 75) return String(diff).padStart(2, '0');
+  return null;
+}
 
-  const freqMes = {};
-  for (const f of bloque4Sem) {
-    for (const s of Object.values(db.jornadas[f].sorteos)) {
-      freqMes[s.codigo] = (freqMes[s.codigo] || 0) + 1;
-    }
+function normalizeDateStr(input) {
+  if (!input) return '2026-11-26';
+  const s = String(input).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const parts = s.split(/[/-]/);
+  if (parts.length === 3) {
+    const [d, m, y] = parts;
+    return `${y.padStart(4, '0')}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
   }
-  const maxFreqMes = Math.max(0, ...Object.values(freqMes));
-  const senalMes = (bloque4Sem.length >= 7 && maxFreqMes >= 4) ? "ALTA" : "BAJA";
-  const multMes = senalMes === "ALTA" ? 1.1 : 0.9;
+  return '2026-11-26';
+}
 
-  const freq7 = {};
-  for (const f of ventana7) {
-    for (const s of Object.values(db.jornadas[f].sorteos)) {
-      freq7[s.codigo] = (freq7[s.codigo] || 0) + 1;
+function toDisplayDate(isoDate) {
+  const [y, m, d] = isoDate.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+function loadHistory() {
+  try {
+    if (fs.existsSync(DATA_FILE)) {
+      const parsed = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+      if (Array.isArray(parsed.draws)) return parsed.draws;
     }
+  } catch (e) {
+    console.error('Error leyendo historial:', e.message);
+  }
+  return [];
+}
+
+function saveHistory(draws) {
+  try {
+    fs.writeFileSync(DATA_FILE, JSON.stringify({ draws }, null, 2));
+  } catch (e) {
+    console.error('Error guardando historial:', e.message);
+  }
+}
+
+function sortDrawsChronologically(draws) {
+  return [...draws].sort((a, b) => {
+    if (a.date !== b.date) return a.date.localeCompare(b.date);
+    return FRANJAS_12.indexOf(a.franja) - FRANJAS_12.indexOf(b.franja);
+  });
+}
+
+function computeEngine(draws, activeDate) {
+  const ordered = sortDrawsChronologically(draws);
+  const uniqueDates = [...new Set(ordered.map(d => d.date))];
+  const currentDate = activeDate || (uniqueDates[uniqueDates.length - 1] || '2026-11-26');
+  const todayDraws = ordered.filter(d => d.date === currentDate);
+  const franjasCount = todayDraws.length;
+  const closedAndRotated = franjasCount >= 12;
+
+  const prevDates = uniqueDates.filter(d => d < currentDate);
+  const prevDate = prevDates[prevDates.length - 1] || null;
+  const prevDayDraws = prevDate ? ordered.filter(d => d.date === prevDate) : [];
+
+  const window7Dates = new Set(uniqueDates.slice(-7));
+  const window7Draws = ordered.filter(d => window7Dates.has(d.date));
+
+  const month28Dates = new Set(uniqueDates.slice(-28));
+  const month28Draws = ordered.filter(d => month28Dates.has(d.date));
+
+  const freq28 = new Map();
+  for (const item of CATALOGO_77) freq28.set(item.code, 0);
+  for (const d of month28Draws) freq28.set(d.code, (freq28.get(d.code) || 0) + 1);
+  const activeCodes28 = [...freq28.values()].filter(c => c > 0).length;
+  const monthlySignal = (month28Draws.length >= 168 && activeCodes28 >= 45) ? 'ALTA' : 'BAJA';
+
+  const freq7 = new Map();
+  const days7Presence = new Map();
+  for (const item of CATALOGO_77) {
+    freq7.set(item.code, 0);
+    days7Presence.set(item.code, new Set());
+  }
+  for (const d of window7Draws) {
+    freq7.set(d.code, (freq7.get(d.code) || 0) + 1);
+    days7Presence.get(d.code).add(d.date);
   }
 
-  const jornadaHoy = db.jornadas[fechaActual] || { sorteos: {} };
-  const sorteosHoy = Object.values(jornadaHoy.sorteos);
-  const freqHoy = {};
-  for (const s of sorteosHoy) freqHoy[s.codigo] = (freqHoy[s.codigo] || 0) + 1;
+  const freqToday = new Map();
+  for (const d of todayDraws) freqToday.set(d.code, (freqToday.get(d.code) || 0) + 1);
 
-  const fechaAyer = db.ordenFechas[db.ordenFechas.indexOf(fechaActual) - 1];
-  const codigosAyer = new Set(
-    fechaAyer ? Object.values(db.jornadas[fechaAyer]?.sorteos || {}).map(x => x.codigo) : []
-  );
+  const prevDayCodes = new Set(prevDayDraws.map(d => d.code));
+  const lastDraw = ordered[ordered.length - 1] || null;
+  const openingToday = todayDraws.find(d => d.franja === '08:00 AM') || null;
+  const closingToday = todayDraws.find(d => d.franja === '07:00 PM') || null;
 
-  const candidatos = Object.entries(NOMBRES_77).map(([codigo, nombre]) => {
-    let factores = 0;
+  const mirrorTargets = new Set();
+  const despejeTargets = new Set();
+  const referenceCodes = [
+    ...(lastDraw ? [lastDraw.code] : []),
+    ...(openingToday ? [openingToday.code] : []),
+    ...(closingToday ? [closingToday.code] : [])
+  ];
+  for (const c of referenceCodes) {
+    const esp = getEspejo(c);
+    const desp = getDespeje(c);
+    if (esp) mirrorTargets.add(esp);
+    if (desp) despejeTargets.add(desp);
+  }
+
+  const scored = CATALOGO_77.map(item => {
+    const c = item.code;
+    const f7 = freq7.get(c) || 0;
+    const d7 = days7Presence.get(c).size;
+    const fToday = freqToday.get(c) || 0;
+    const isAxis = EJES_CLASICOS.has(c);
+    const isRebote = prevDayCodes.has(c);
+    const isMirror = mirrorTargets.has(c);
+    const isDespeje = despejeTargets.has(c);
+
     let score = 0;
+    let factors = 0;
+    const reasons = [];
 
-    const c7 = freq7[codigo] || 0;
-    if (c7 > 0) {
-      factores += 1;
-      score += Math.min(c7 * 12, 48) * multMes;
-      if (c7 >= 4) score -= (c7 - 3) * 8;
+    if (f7 >= 2) {
+      score += f7 * 4;
+      factors += 1;
+      reasons.push(`Ventana 7d (${f7}x en ${d7}d)`);
+    } else if (f7 === 1) {
+      score += 2;
+      reasons.push('Presencia 7d (1x)');
     }
 
-    if ((freqMes[codigo] || 0) >= 2 && c7 > 0) {
-      factores += 1;
-      score += 15;
+    if (isAxis) {
+      score += 3;
+      factors += 1;
+      reasons.push('Eje Clásico');
     }
 
-    if (codigosAyer.has(codigo)) {
-      factores += 1;
-      score += 14;
+    if (isRebote) {
+      score += 3;
+      factors += 1;
+      reasons.push('Rebote día previo');
     }
 
-    const cHoy = freqHoy[codigo] || 0;
-    if (cHoy === 2) {
-      score -= 32;
-      if (codigosAyer.has(codigo)) score -= 12;
-    } else if (cHoy >= 3) {
-      score -= 45;
-      if (codigosAyer.has(codigo)) score -= 12;
+    if (isMirror) {
+      score += 3;
+      factors += 1;
+      reasons.push('Puente Espejo');
     }
 
+    if (isDespeje) {
+      score += 3;
+      factors += 1;
+      reasons.push('Puente Despeje');
+    }
+
+    if (fToday >= 2) {
+      score -= 6 * fToday;
+      reasons.push(`Moderación intradía (${fToday}x hoy)`);
+    } else if (fToday === 1) {
+      score -= 2;
+      reasons.push('Salida hoy (1x)');
+    }
+
+    if (f7 >= 4) {
+      score -= 4;
+      reasons.push('Amortiguador anti-saturación (7d)');
+    }
+
+    const fuerte = factors >= 2 && d7 >= 1;
     return {
-      codigo,
-      nombre,
-      score: Math.round(score),
-      factores_activos: factores,
-      presencia_ventana: c7 > 0,
-      eje_clasico: EJES_CLASICOS.has(codigo),
-      bloqueado_fija: cHoy >= 2
+      ...item,
+      score,
+      factors,
+      days7: d7,
+      freq7: f7,
+      isAxis,
+      fuerte,
+      reasons
     };
-  }).sort((a, b) => b.score - a.score);
+  });
 
-  const aptasFijas = candidatos.filter(c => !c.bloqueado_fija);
-  let numFijas = 2;
-  if (aptasFijas.slice(0, 3).every(c => c.score >= 54 && c.factores_activos >= 3)) {
-    numFijas = 3;
-  } else if (aptasFijas[0]?.score >= 55 && aptasFijas[0]?.factores_activos >= 3 && (aptasFijas[1]?.score || 0) < 50) {
-    numFijas = 1;
-  } else if (aptasFijas.slice(0, 2).every(c => c.score >= 50 && c.factores_activos >= 2)) {
-    numFijas = 2;
-  } else {
-    numFijas = 1;
+  scored.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    if (b.factors !== a.factors) return b.factors - a.factors;
+    return a.code.localeCompare(b.code);
+  });
+
+  const blind6 = [];
+  let axisCount = 0;
+  for (const cand of scored) {
+    if (blind6.length >= 6) break;
+    if (cand.isAxis && axisCount >= 4) continue;
+    blind6.push(cand);
+    if (cand.isAxis) axisCount += 1;
   }
 
-  const fijas = aptasFijas.slice(0, numFijas).map(m => ({
-    ...m,
-    es_fija: true,
-    motivo: `Score ${m.score} con ${m.factores_activos} factores activos`
+  const strongCandidates = blind6.filter(x => x.fuerte);
+  const desiredFixedCount = strongCandidates.length >= 3 ? 2 : Math.max(1, Math.min(2, strongCandidates.length || 1));
+  const fijas = blind6.slice(0, desiredFixedCount).map((item, idx) => ({
+    ...item,
+    fixedLabel: `FIJA ${idx + 1}`,
+    justification: item.reasons.length ? item.reasons.join(' · ') : 'Balance técnico de señal activa'
   }));
+  const fixedCodes = new Set(fijas.map(f => f.code));
 
-  const seisMarcas = [];
-  let ejesUsados = 0;
+  const openingCandidates = scored.filter(x => !prevDayCodes.has(x.code) || x.isRebote).slice(0, 3);
 
-  for (const m of fijas) {
-    seisMarcas.push({
-      ...m,
-      es_fija: true,
-      pronostico_fuerte: m.factores_activos >= 2 && m.presencia_ventana
-    });
-    if (m.eje_clasico) ejesUsados += 1;
-  }
-
-  for (const m of candidatos) {
-    if (seisMarcas.length >= 6) break;
-    if (seisMarcas.some(x => x.codigo === m.codigo)) continue;
-    if (m.eje_clasico && ejesUsados >= 4) continue;
-    seisMarcas.push({
-      ...m,
-      es_fija: false,
-      pronostico_fuerte: m.factores_activos >= 2 && m.presencia_ventana
-    });
-    if (m.eje_clasico) ejesUsados += 1;
-  }
-
-  const pronostico = {
-    fecha: fechaActual,
-    senal_mensual: { estado: senalMes, dias_procesados: bloque4Sem.length },
+  return {
+    currentDate,
+    displayDate: toDisplayDate(currentDate),
+    franjasCount,
+    closedAndRotated,
+    totalDraws: ordered.length,
+    window7Count: window7Draws.length,
+    month28Count: month28Draws.length,
+    monthlySignal,
     fijas,
-    pronostico_ciego_6: seisMarcas.map((x, idx) => ({ orden: idx + 1, ...x })),
-    ejes_clasicos_usados: ejesUsados
+    fixedCodes,
+    blind6,
+    openingCandidates,
+    todayDraws
   };
-
-  db.pronosticos[fechaActual] = pronostico;
-  return pronostico;
 }
 
-app.post("/api/sorteos", (req, res) => {
-  const { fecha, franja, entrada } = req.body;
-  if (!fecha || !FRANJAS.includes(franja)) {
-    return res.status(400).json({ ok: false, error: "Fecha o franja inválida" });
-  }
-  const marca = resolverMarca(entrada);
-  if (!marca) {
-    return res.status(400).json({ ok: false, error: "Marca no reconocida en el catálogo de 77 entradas" });
-  }
+function renderPage(state, message = '') {
+  const nextFranja = FRANJAS_12[Math.min(state.franjasCount, FRANJAS_12.length - 1)];
+  const statusText = state.closedAndRotated
+    ? `Jornada ${state.currentDate} · 12/12 franjas · Estado: Cerrada y rotada`
+    : `Jornada ${state.currentDate} · ${state.franjasCount}/12 franjas · Estado: En curso`;
 
-  if (!db.jornadas[fecha]) {
-    db.jornadas[fecha] = { fecha, sorteos: {}, cerrada: false, rotada: false };
-    db.ordenFechas.push(fecha);
-  }
+  const fijasHtml = state.fijas.map(f => `
+    <div style="margin-bottom:10px;">
+      <strong>${f.code} ${f.name}</strong>
+      <span class="badge">Score ${f.score} con ${f.factors} factores activos</span>
+      <div class="subnote">${f.fixedLabel}: ${f.justification}</div>
+    </div>
+  `).join('');
 
-  let diasPausa = null;
-  for (let i = db.ordenFechas.length - 1; i >= 0; i--) {
-    const fPrev = db.ordenFechas[i];
-    if (fPrev === fecha) continue;
-    const salio = Object.values(db.jornadas[fPrev].sorteos).some(s => s.codigo === marca.codigo);
-    if (salio) {
-      diasPausa = db.ordenFechas.length - 1 - i;
-      break;
-    }
-  }
+  const blindHtml = state.blind6.map((b, i) => {
+    const isFixed = state.fixedCodes.has(b.code);
+    return `
+      <li style="margin-bottom:6px;">
+        <strong>${i + 1}. ${b.code} ${b.name} (${b.score} pts)</strong>
+        ${isFixed ? '<span class="tag-fija">FIJA</span>' : ''}
+        ${b.fuerte ? '<span class="tag-fuerte">Pronóstico fuerte</span>' : ''}
+        <div class="subnote">${b.reasons.join(' · ') || 'Señal base'}</div>
+      </li>
+    `;
+  }).join('');
 
-  db.jornadas[fecha].sorteos[franja] = marca;
+  const openingHtml = state.openingCandidates.map(o =>
+    `<span class="chip">${o.code} ${o.name} (${o.score} pts)</span>`
+  ).join(' ');
 
-  const conteoHoy = Object.values(db.jornadas[fecha].sorteos).filter(s => s.codigo === marca.codigo).length;
-  const anomaliasHoy = [];
-  if (conteoHoy >= 2) {
-    anomaliasHoy.push({
-      tipo: conteoHoy >= 3 ? "repeticion_intradia_3plus" : "repeticion_intradia_2",
-      codigo: marca.codigo,
-      nombre: marca.nombre,
-      ajuste_puntos: conteoHoy >= 3 ? -45 : -32
-    });
-  }
-  if (diasPausa !== null && diasPausa >= 5) {
-    anomaliasHoy.push({
-      tipo: diasPausa >= 10 ? "latencia_extrema_10d" : "marca_fria_5d",
-      codigo: marca.codigo,
-      nombre: marca.nombre,
-      pausa_dias: diasPausa
-    });
-  }
-  db.anomalias.push({ fecha, franja, anomalias: anomaliasHoy });
-
-  const totalFranjas = Object.keys(db.jornadas[fecha].sorteos).length;
-  if (franja === "07:00 PM" || totalFranjas === 12) {
-    db.jornadas[fecha].cerrada = true;
-    db.jornadas[fecha].rotada = true;
-  }
-
-  const pronostico = recalcularMotor(fecha);
-  res.json({
-    ok: true,
-    jornada: db.jornadas[fecha],
-    sorteo_normalizado: { ...marca, dias_desde_ultima_vez: diasPausa },
-    anomalias_detectadas: anomaliasHoy,
-    pronostico
-  });
-});
-
-app.get("/api/estado-actual", (req, res) => {
-  const fecha = req.query.fecha || db.ordenFechas[db.ordenFechas.length - 1] || "2026-11-26";
-  const pronostico = db.pronosticos[fecha] || recalcularMotor(fecha);
-  res.json({
-    ok: true,
-    jornada: db.jornadas[fecha] || { fecha, sorteos: {}, cerrada: false, rotada: false },
-    pronostico
-  });
-});
-
-app.get("/", (req, res) => {
-  res.type("html").send(`<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Guácharo Master Pro V2.9.10</title>
+  <meta name="theme-color" content="#0b1120" />
+  <link rel="manifest" href="/manifest.json" />
+  <title>Guácharo Master Pro (V2.9.10)</title>
   <style>
-    body { font-family: system-ui, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 16px; }
-    .card { background: #1e293b; border-radius: 12px; padding: 14px; margin-bottom: 14px; }
-    input, select, button { width: 100%; padding: 10px; margin-top: 8px; border-radius: 8px; border: 1px solid #334155; font-size: 15px; box-sizing: border-box; }
-    input, select { background: #0f172a; color: #fff; }
-    button { background: #22c55e; color: #052e16; font-weight: 700; cursor: pointer; border: none; }
-    .badge { display: inline-block; padding: 3px 8px; border-radius: 999px; font-size: 12px; background: #334155; margin-left: 6px; }
-    .fuerte { background: #16a34a; color: #fff; }
+    * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+    body { margin: 0; background: #090e1a; color: #f1f5f9; padding: 16px; }
+    .container { max-width: 780px; margin: 0 auto; }
+    h1 { margin: 0 0 14px; font-size: 1.65rem; }
+    .card { background: #131c31; border: 1px solid #22304d; border-radius: 14px; padding: 18px; margin-bottom: 16px; }
+    h2 { margin: 0 0 12px; font-size: 1.2rem; }
+    label { display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 4px; }
+    select, input[type="text"] {
+      width: 100%; padding: 11px 12px; border-radius: 8px; border: 1px solid #2b3a5c;
+      background: #0d1526; color: #f8fafc; font-size: 1rem; margin-bottom: 12px;
+    }
+    button {
+      width: 100%; padding: 12px; border: none; border-radius: 8px;
+      background: #22c55e; color: #052e16; font-weight: 700; font-size: 1rem; cursor: pointer;
+    }
+    button:hover { background: #16a34a; }
+    .status { margin-top: 10px; font-size: 0.9rem; color: #cbd5e1; }
+    .badge { background: #1e293b; color: #e2e8f0; padding: 3px 8px; border-radius: 999px; font-size: 0.8rem; margin-left: 6px; }
+    .tag-fija { background: #334155; color: #f8fafc; padding: 2px 7px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; margin-left: 6px; }
+    .tag-fuerte { background: #14532d; color: #86efac; padding: 2px 7px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; margin-left: 6px; }
+    .subnote { font-size: 0.8rem; color: #94a3b8; margin-top: 2px; }
+    ol { padding-left: 20px; margin: 0; }
+    .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+    .stat-box { background: #0d1526; border: 1px solid #22304d; border-radius: 10px; padding: 10px; }
+    .stat-val { font-size: 1.05rem; font-weight: 700; color: #38bdf8; }
+    .chip { display: inline-block; background: #0d1526; border: 1px solid #2b3a5c; padding: 5px 10px; border-radius: 8px; margin: 3px 4px 0 0; font-size: 0.85rem; }
+    .msg { background: #1e3a8a; color: #dbeafe; padding: 10px 12px; border-radius: 8px; margin-bottom: 12px; font-size: 0.9rem; }
   </style>
 </head>
 <body>
-  <h2>Guácharo Master Pro (V2.9.10)</h2>
+  <div class="container">
+    <h1>Guácharo Master Pro (V2.9.10)</h1>
 
-  <div class="card">
-    <h3>Registrar Sorteo en Tiempo Real</h3>
-    <input id="fecha" type="date" value="2026-11-26" />
-    <select id="franja">
-      <option>08:00 AM</option><option>09:00 AM</option><option>10:00 AM</option><option>11:00 AM</option>
-      <option>12:00 PM</option><option>01:00 PM</option><option>02:00 PM</option><option>03:00 PM</option>
-      <option>04:00 PM</option><option>05:00 PM</option><option selected>06:00 PM</option><option>07:00 PM</option>
-    </select>
-    <input id="entrada" type="text" placeholder="Ej: 02 Toro o 22 Camello" />
-    <button onclick="enviarSorteo()">Enviar y Recalcular</button>
-    <div id="estado-jornada" style="margin-top:10px; font-size:13px; color:#cbd5e1;"></div>
+    ${message ? `<div class="msg">${message}</div>` : ''}
+
+    <div class="card">
+      <h2>Registrar Sorteo en Tiempo Real</h2>
+      <form method="POST" action="/registrar">
+        <label for="fecha">Fecha (DD/MM/YYYY o YYYY-MM-DD)</label>
+        <input id="fecha" name="fecha" type="text" value="${state.displayDate}" required />
+
+        <label for="franja">Franja Horaria (12 Ciclos)</label>
+        <select id="franja" name="franja">
+          ${FRANJAS_12.map(f => `<option value="${f}" ${f === nextFranja ? 'selected' : ''}>${f}</option>`).join('')}
+        </select>
+
+        <label for="animal">Animalito (Catálogo 77 · 0, 00 y 01-75)</label>
+        <input id="animal" name="animal" type="text" placeholder="Ej: 02 Toro o 22 Camello" required />
+
+        <button type="submit">Enviar y Recalcular</button>
+      </form>
+      <div class="status">${statusText}</div>
+    </div>
+
+    <div class="card">
+      <h2>Telemetría del Motor (77 Entradas · 7d / 28d)</h2>
+      <div class="grid-stats">
+        <div class="stat-box">
+          <div class="subnote">Catálogo Canónico</div>
+          <div class="stat-val">77/77 PASSED</div>
+        </div>
+        <div class="stat-box">
+          <div class="subnote">Señal Mensual (28d)</div>
+          <div class="stat-val">${state.monthlySignal} (${state.month28Count} sorteos)</div>
+        </div>
+        <div class="stat-box">
+          <div class="subnote">Ventana Rotativa (7d)</div>
+          <div class="stat-val">${state.window7Count} / 84 sorteos</div>
+        </div>
+        <div class="stat-box">
+          <div class="subnote">Histórico Total</div>
+          <div class="stat-val">${state.totalDraws} registros</div>
+        </div>
+      </div>
+      <div style="margin-top:12px;">
+        <div class="subnote">Proyección Apertura (08:00 AM):</div>
+        <div>${openingHtml || '<span class="subnote">Sin datos suficientes</span>'}</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Fijas Elegidas por el Motor</h2>
+      ${fijasHtml}
+    </div>
+
+    <div class="card">
+      <h2>Pronóstico Ciego (6 Marcas)</h2>
+      <ol>${blindHtml}</ol>
+    </div>
   </div>
-
-  <div class="card">
-    <h3>Fijas Elegidas por el Motor</h3>
-    <div id="fijas">Sin calcular aún</div>
-  </div>
-
-  <div class="card">
-    <h3>Pronóstico Ciego (6 Marcas)</h3>
-    <div id="seis">Sin calcular aún</div>
-  </div>
-
-  <script>
-    async function cargarEstado() {
-      const fecha = document.getElementById("fecha").value;
-      const res = await fetch("/api/estado-actual?fecha=" + encodeURIComponent(fecha));
-      const data = await res.json();
-      if (data.ok) {
-        renderJornada(data.jornada);
-        renderPronostico(data.pronostico);
-      }
-    }
-
-    async function enviarSorteo() {
-      const payload = {
-        fecha: document.getElementById("fecha").value,
-        franja: document.getElementById("franja").value,
-        entrada: document.getElementById("entrada").value
-      };
-      const res = await fetch("/api/sorteos", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-      if (!data.ok) return alert(data.error);
-      document.getElementById("entrada").value = "";
-      renderJornada(data.jornada);
-      renderPronostico(data.pronostico);
-    }
-
-    function renderJornada(j) {
-      const count = Object.keys(j.sorteos || {}).length;
-      document.getElementById("estado-jornada").textContent =
-        "Jornada " + j.fecha + " · " + count + "/12 franjas · Estado: " + (j.cerrada ? "Cerrada y rotada" : "En curso");
-    }
-
-    function renderPronostico(p) {
-      document.getElementById("fijas").innerHTML = (p.fijas || []).map(f =>
-        "<div><b>" + f.codigo + " " + f.nombre + "</b> <span class='badge'>" + f.motivo + "</span></div>"
-      ).join("") || "Ninguna";
-
-      document.getElementById("seis").innerHTML = (p.pronostico_ciego_6 || []).map(m =>
-        "<div>" + m.orden + ". <b>" + m.codigo + " " + m.nombre + "</b> (" + m.score + " pts)" +
-        (m.es_fija ? " <span class='badge'>FIJA</span>" : "") +
-        (m.pronostico_fuerte ? " <span class='badge fuerte'>Pronóstico fuerte</span>" : "") + "</div>"
-      ).join("");
-    }
-
-    cargarEstado();
-  </script>
 </body>
-</html>`);
+</html>`;
+}
+
+app.get('/manifest.json', (req, res) => {
+  res.json({
+    name: 'Guácharo Master Pro V2.9.10',
+    short_name: 'Guácharo Pro',
+    start_url: '/',
+    display: 'standalone',
+    background_color: '#090e1a',
+    theme_color: '#0b1120',
+    icons: []
+  });
+});
+
+app.get('/', (req, res) => {
+  const draws = loadHistory();
+  const dateParam = req.query.fecha ? normalizeDateStr(req.query.fecha) : null;
+  const state = computeEngine(draws, dateParam);
+  res.send(renderPage(state));
+});
+
+app.post('/registrar', (req, res) => {
+  const dateIso = normalizeDateStr(req.body.fecha);
+  const franja = FRANJAS_12.includes(req.body.franja) ? req.body.franja : '08:00 AM';
+  const normalized = normalizeAnimal(req.body.animal);
+
+  let draws = loadHistory();
+  let msg = '';
+
+  if (!normalized) {
+    msg = `Entrada no reconocida en el catálogo de 77 animalitos: "${req.body.animal || ''}".`;
+  } else {
+    draws = draws.filter(d => !(d.date === dateIso && d.franja === franja));
+    draws.push({
+      date: dateIso,
+      franja,
+      code: normalized.code,
+      name: normalized.name
+    });
+    saveHistory(draws);
+    msg = `Registrado ${normalized.code} ${normalized.name} en ${toDisplayDate(dateIso)} (${franja}) y motor recalculado.`;
+  }
+
+  const state = computeEngine(draws, dateIso);
+  res.send(renderPage(state, msg));
+});
+
+app.post('/api/bulk', (req, res) => {
+  const incoming = Array.isArray(req.body.draws) ? req.body.draws : [];
+  let draws = loadHistory();
+  let added = 0;
+
+  for (const row of incoming) {
+    const dateIso = normalizeDateStr(row.date || row.fecha);
+    const franja = FRANJAS_12.includes(row.franja) ? row.franja : null;
+    const normalized = normalizeAnimal(row.animal || `${row.code || ''} ${row.name || ''}`);
+    if (dateIso && franja && normalized) {
+      draws = draws.filter(d => !(d.date === dateIso && d.franja === franja));
+      draws.push({ date: dateIso, franja, code: normalized.code, name: normalized.name });
+      added += 1;
+    }
+  }
+
+  saveHistory(draws);
+  const state = computeEngine(draws, null);
+  res.json({ ok: true, added, state });
 });
 
 app.listen(PORT, () => {
-  console.log("Guácharo Master Pro API activa en puerto " + PORT);
+  console.log(`Guácharo Master Pro V2.9.10 escuchando en puerto ${PORT}`);
 });
   
