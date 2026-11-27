@@ -6,8 +6,8 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const DATA_FILE = path.join(__dirname, 'draws_history.json');
 
-app.use(express.json({ limit: '5mb' }));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // 1. CATALOGO CANONICO DE 77 ENTRADAS (0, 00 y 01-75)
 const CATALOGO_77 = [
@@ -95,6 +95,21 @@ const FRANJAS_12 = [
   '12:00 PM', '01:00 PM', '02:00 PM', '03:00 PM',
   '04:00 PM', '05:00 PM', '06:00 PM', '07:00 PM'
 ];
+
+const OPPOSITE_FRANJA = {
+  '08:00 AM': '07:00 PM',
+  '09:00 AM': '06:00 PM',
+  '10:00 AM': '05:00 PM',
+  '11:00 AM': '04:00 PM',
+  '12:00 PM': '03:00 PM',
+  '01:00 PM': '02:00 PM',
+  '02:00 PM': '01:00 PM',
+  '03:00 PM': '12:00 PM',
+  '04:00 PM': '11:00 AM',
+  '05:00 PM': '10:00 AM',
+  '06:00 PM': '09:00 AM',
+  '07:00 PM': '08:00 AM'
+};
 
 const EJES_CLASICOS = new Set(['02', '12', '30', '39', '53', '74', '19', '28']);
 
@@ -207,22 +222,27 @@ function computeEngine(draws, activeDate) {
   const month28Dates = new Set(uniqueDates.slice(-28));
   const month28Draws = ordered.filter(d => month28Dates.has(d.date));
 
+  // Evaluacion mensual (4 semanas / 28 dias)
   const freq28 = new Map();
   for (const item of CATALOGO_77) freq28.set(item.code, 0);
   for (const d of month28Draws) freq28.set(d.code, (freq28.get(d.code) || 0) + 1);
   const activeCodes28 = [...freq28.values()].filter(c => c > 0).length;
-  const monthlySignal = (month28Draws.length >= 168 && activeCodes28 >= 45) ? 'ALTA' : 'BAJA';
+  const maxFreq28 = Math.max(0, ...freq28.values());
+  const monthlySignal = (month28Draws.length >= 168 && activeCodes28 >= 45 && maxFreq28 >= 7) ? 'ALTA' : 'BAJA';
 
+  // Frecuencias, presencia por dias y ultima aparicion en ventana de 7 dias
   const freq7 = new Map();
   const days7Presence = new Map();
+  const lastIndexIn7 = new Map();
   for (const item of CATALOGO_77) {
     freq7.set(item.code, 0);
     days7Presence.set(item.code, new Set());
   }
-  for (const d of window7Draws) {
+  window7Draws.forEach((d, idx) => {
     freq7.set(d.code, (freq7.get(d.code) || 0) + 1);
     days7Presence.get(d.code).add(d.date);
-  }
+    lastIndexIn7.set(d.code, idx);
+  });
 
   const freqToday = new Map();
   for (const d of todayDraws) freqToday.set(d.code, (freqToday.get(d.code) || 0) + 1);
@@ -232,6 +252,33 @@ function computeEngine(draws, activeDate) {
   const openingToday = todayDraws.find(d => d.franja === '08:00 AM') || null;
   const closingToday = todayDraws.find(d => d.franja === '07:00 PM') || null;
 
+  // Simetria horaria opuesta en ventana de 7 dias
+  const nextFranja = FRANJAS_12[Math.min(franjasCount, FRANJAS_12.length - 1)];
+  const oppositeFranja = OPPOSITE_FRANJA[nextFranja] || '07:00 PM';
+  const symCodes = new Set(
+    window7Draws
+      .filter(d => d.franja === oppositeFranja || (closedAndRotated && d.franja === '07:00 PM'))
+      .map(d => d.code)
+  );
+
+  // Secuencias directas A -> B y patrones latentes A -> _ -> C en ventana de 7 dias
+  const seqTargets = new Set();
+  const latentTargets = new Set();
+  const anchorCode = lastDraw ? lastDraw.code : null;
+  const prevAnchorCode = ordered.length >= 2 ? ordered[ordered.length - 2].code : null;
+
+  for (let i = 0; i < window7Draws.length - 1; i++) {
+    const curr = window7Draws[i];
+    const next = window7Draws[i + 1];
+    if (anchorCode && curr.code === anchorCode) seqTargets.add(next.code);
+    if (i + 2 < window7Draws.length) {
+      const afterNext = window7Draws[i + 2];
+      if (prevAnchorCode && curr.code === prevAnchorCode) latentTargets.add(afterNext.code);
+      if (anchorCode && curr.code === anchorCode) latentTargets.add(afterNext.code);
+    }
+  }
+
+  // Espejos y despejes de referencia
   const mirrorTargets = new Set();
   const despejeTargets = new Set();
   const referenceCodes = [
@@ -246,6 +293,24 @@ function computeEngine(draws, activeDate) {
     if (desp) despejeTargets.add(desp);
   }
 
+  // Auditoria de aciertos sobre pronosticos en dias cerrados previos
+  let auditedHits = 0;
+  let auditedDays = 0;
+  for (let i = 1; i < uniqueDates.length; i++) {
+    const dPrev = uniqueDates[i - 1];
+    const dCurr = uniqueDates[i];
+    const drawsPrev = ordered.filter(x => x.date <= dPrev);
+    const drawsCurr = ordered.filter(x => x.date === dCurr);
+    if (drawsCurr.length >= 12) {
+      auditedDays += 1;
+      const lastPrevCode = drawsPrev[drawsPrev.length - 1]?.code;
+      const hitCodes = new Set(drawsCurr.map(x => x.code));
+      if (lastPrevCode && (hitCodes.has(lastPrevCode) || hitCodes.has(getEspejo(lastPrevCode)) || hitCodes.has(getDespeje(lastPrevCode)))) {
+        auditedHits += 1;
+      }
+    }
+  }
+
   const scored = CATALOGO_77.map(item => {
     const c = item.code;
     const f7 = freq7.get(c) || 0;
@@ -255,6 +320,13 @@ function computeEngine(draws, activeDate) {
     const isRebote = prevDayCodes.has(c);
     const isMirror = mirrorTargets.has(c);
     const isDespeje = despejeTargets.has(c);
+    const isSymmetry = symCodes.has(c);
+    const isSeq = seqTargets.has(c);
+    const isLatent = latentTargets.has(c);
+
+    const lastIdx = lastIndexIn7.has(c) ? lastIndexIn7.get(c) : -1;
+    const gapDraws = lastIdx >= 0 ? (window7Draws.length - 1 - lastIdx) : window7Draws.length;
+    const isCycleDue = f7 >= 1 && gapDraws >= 6 && gapDraws <= 24;
 
     let score = 0;
     let factors = 0;
@@ -291,6 +363,35 @@ function computeEngine(draws, activeDate) {
       score += 3;
       factors += 1;
       reasons.push('Puente Despeje');
+    }
+
+    if (isSymmetry) {
+      score += 2;
+      factors += 1;
+      reasons.push(`Simetría horaria (${oppositeFranja})`);
+    }
+
+    if (isSeq) {
+      score += 2;
+      factors += 1;
+      reasons.push('Secuencia A -> B');
+    }
+
+    if (isLatent) {
+      score += 2;
+      factors += 1;
+      reasons.push('Patrón latente A -> _ -> C');
+    }
+
+    if (isCycleDue) {
+      score += 2;
+      reasons.push(`Ciclo/latencia (${gapDraws} sorteos)`);
+    }
+
+    // Moderacion si señal mensual es BAJA para evitar sobreponderar frecuencias aisladas
+    if (monthlySignal === 'BAJA' && f7 >= 3) {
+      score -= 2;
+      reasons.push('Moderación señal mensual BAJA');
     }
 
     if (fToday >= 2) {
@@ -334,8 +435,15 @@ function computeEngine(draws, activeDate) {
     if (cand.isAxis) axisCount += 1;
   }
 
+  // Seleccion autonoma de 1 a 3 fijas segun fuerza, densidad y balance
   const strongCandidates = blind6.filter(x => x.fuerte);
-  const desiredFixedCount = strongCandidates.length >= 3 ? 2 : Math.max(1, Math.min(2, strongCandidates.length || 1));
+  let desiredFixedCount = 1;
+  if (strongCandidates.length >= 4 && todayDraws.length > 0) {
+    desiredFixedCount = 3;
+  } else if (strongCandidates.length >= 2) {
+    desiredFixedCount = 2;
+  }
+
   const fijas = blind6.slice(0, desiredFixedCount).map((item, idx) => ({
     ...item,
     fixedLabel: `FIJA ${idx + 1}`,
@@ -343,7 +451,17 @@ function computeEngine(draws, activeDate) {
   }));
   const fixedCodes = new Set(fijas.map(f => f.code));
 
-  const openingCandidates = scored.filter(x => !prevDayCodes.has(x.code) || x.isRebote).slice(0, 3);
+  const openingCandidates = scored
+    .filter(x => (!prevDayCodes.has(x.code) || x.isRebote) && (freqToday.get(x.code) || 0) === 0)
+    .slice(0, 3);
+
+  const zeroDayDiagnostic = ordered.length === 0
+    ? 'Historial en cero: ingrese sorteos para activar cálculos de 7d y 28d.'
+    : (todayDraws.length === 0
+      ? `Día cero sin registros cargados para ${currentDate}; se proyecta con base en histórico previo.`
+      : (strongCandidates.length === 0
+        ? `Jornada ${currentDate} sin candidatos con >=2 factores en ventana activa; se aplica balance descriptivo.`
+        : `Jornada ${currentDate} activa con ${strongCandidates.length} marcas de pronóstico fuerte y ${axisCount}/4 ejes clásicos.`));
 
   return {
     currentDate,
@@ -358,7 +476,10 @@ function computeEngine(draws, activeDate) {
     fixedCodes,
     blind6,
     openingCandidates,
-    todayDraws
+    todayDraws,
+    auditedHits,
+    auditedDays,
+    zeroDayDiagnostic
   };
 }
 
@@ -408,15 +529,17 @@ function renderPage(state, message = '') {
     .card { background: #131c31; border: 1px solid #22304d; border-radius: 14px; padding: 18px; margin-bottom: 16px; }
     h2 { margin: 0 0 12px; font-size: 1.2rem; }
     label { display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 4px; }
-    select, input[type="text"] {
+    select, input[type="text"], textarea {
       width: 100%; padding: 11px 12px; border-radius: 8px; border: 1px solid #2b3a5c;
       background: #0d1526; color: #f8fafc; font-size: 1rem; margin-bottom: 12px;
     }
+    textarea { min-height: 90px; font-size: 0.9rem; }
     button {
       width: 100%; padding: 12px; border: none; border-radius: 8px;
       background: #22c55e; color: #052e16; font-weight: 700; font-size: 1rem; cursor: pointer;
     }
     button:hover { background: #16a34a; }
+    button.secondary { background: #1e293b; color: #e2e8f0; border: 1px solid #334155; margin-top: 4px; }
     .status { margin-top: 10px; font-size: 0.9rem; color: #cbd5e1; }
     .badge { background: #1e293b; color: #e2e8f0; padding: 3px 8px; border-radius: 999px; font-size: 0.8rem; margin-left: 6px; }
     .tag-fija { background: #334155; color: #f8fafc; padding: 2px 7px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; margin-left: 6px; }
@@ -428,6 +551,7 @@ function renderPage(state, message = '') {
     .stat-val { font-size: 1.05rem; font-weight: 700; color: #38bdf8; }
     .chip { display: inline-block; background: #0d1526; border: 1px solid #2b3a5c; padding: 5px 10px; border-radius: 8px; margin: 3px 4px 0 0; font-size: 0.85rem; }
     .msg { background: #1e3a8a; color: #dbeafe; padding: 10px 12px; border-radius: 8px; margin-bottom: 12px; font-size: 0.9rem; }
+    .disclaimer { font-size: 0.78rem; color: #94a3b8; margin-top: 8px; }
   </style>
 </head>
 <body>
@@ -443,125 +567,4 @@ function renderPage(state, message = '') {
         <input id="fecha" name="fecha" type="text" value="${state.displayDate}" required />
 
         <label for="franja">Franja Horaria (12 Ciclos)</label>
-        <select id="franja" name="franja">
-          ${FRANJAS_12.map(f => `<option value="${f}" ${f === nextFranja ? 'selected' : ''}>${f}</option>`).join('')}
-        </select>
-
-        <label for="animal">Animalito (Catálogo 77 · 0, 00 y 01-75)</label>
-        <input id="animal" name="animal" type="text" placeholder="Ej: 02 Toro o 22 Camello" required />
-
-        <button type="submit">Enviar y Recalcular</button>
-      </form>
-      <div class="status">${statusText}</div>
-    </div>
-
-    <div class="card">
-      <h2>Telemetría del Motor (77 Entradas · 7d / 28d)</h2>
-      <div class="grid-stats">
-        <div class="stat-box">
-          <div class="subnote">Catálogo Canónico</div>
-          <div class="stat-val">77/77 PASSED</div>
-        </div>
-        <div class="stat-box">
-          <div class="subnote">Señal Mensual (28d)</div>
-          <div class="stat-val">${state.monthlySignal} (${state.month28Count} sorteos)</div>
-        </div>
-        <div class="stat-box">
-          <div class="subnote">Ventana Rotativa (7d)</div>
-          <div class="stat-val">${state.window7Count} / 84 sorteos</div>
-        </div>
-        <div class="stat-box">
-          <div class="subnote">Histórico Total</div>
-          <div class="stat-val">${state.totalDraws} registros</div>
-        </div>
-      </div>
-      <div style="margin-top:12px;">
-        <div class="subnote">Proyección Apertura (08:00 AM):</div>
-        <div>${openingHtml || '<span class="subnote">Sin datos suficientes</span>'}</div>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>Fijas Elegidas por el Motor</h2>
-      ${fijasHtml}
-    </div>
-
-    <div class="card">
-      <h2>Pronóstico Ciego (6 Marcas)</h2>
-      <ol>${blindHtml}</ol>
-    </div>
-  </div>
-</body>
-</html>`;
-}
-
-app.get('/manifest.json', (req, res) => {
-  res.json({
-    name: 'Guácharo Master Pro V2.9.10',
-    short_name: 'Guácharo Pro',
-    start_url: '/',
-    display: 'standalone',
-    background_color: '#090e1a',
-    theme_color: '#0b1120',
-    icons: []
-  });
-});
-
-app.get('/', (req, res) => {
-  const draws = loadHistory();
-  const dateParam = req.query.fecha ? normalizeDateStr(req.query.fecha) : null;
-  const state = computeEngine(draws, dateParam);
-  res.send(renderPage(state));
-});
-
-app.post('/registrar', (req, res) => {
-  const dateIso = normalizeDateStr(req.body.fecha);
-  const franja = FRANJAS_12.includes(req.body.franja) ? req.body.franja : '08:00 AM';
-  const normalized = normalizeAnimal(req.body.animal);
-
-  let draws = loadHistory();
-  let msg = '';
-
-  if (!normalized) {
-    msg = `Entrada no reconocida en el catálogo de 77 animalitos: "${req.body.animal || ''}".`;
-  } else {
-    draws = draws.filter(d => !(d.date === dateIso && d.franja === franja));
-    draws.push({
-      date: dateIso,
-      franja,
-      code: normalized.code,
-      name: normalized.name
-    });
-    saveHistory(draws);
-    msg = `Registrado ${normalized.code} ${normalized.name} en ${toDisplayDate(dateIso)} (${franja}) y motor recalculado.`;
-  }
-
-  const state = computeEngine(draws, dateIso);
-  res.send(renderPage(state, msg));
-});
-
-app.post('/api/bulk', (req, res) => {
-  const incoming = Array.isArray(req.body.draws) ? req.body.draws : [];
-  let draws = loadHistory();
-  let added = 0;
-
-  for (const row of incoming) {
-    const dateIso = normalizeDateStr(row.date || row.fecha);
-    const franja = FRANJAS_12.includes(row.franja) ? row.franja : null;
-    const normalized = normalizeAnimal(row.animal || `${row.code || ''} ${row.name || ''}`);
-    if (dateIso && franja && normalized) {
-      draws = draws.filter(d => !(d.date === dateIso && d.franja === franja));
-      draws.push({ date: dateIso, franja, code: normalized.code, name: normalized.name });
-      added += 1;
-    }
-  }
-
-  saveHistory(draws);
-  const state = computeEngine(draws, null);
-  res.json({ ok: true, added, state });
-});
-
-app.listen(PORT, () => {
-  console.log(`Guácharo Master Pro V2.9.10 escuchando en puerto ${PORT}`);
-});
-  
+        <select id="franja" name="franja"
