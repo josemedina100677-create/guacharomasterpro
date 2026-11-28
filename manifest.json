@@ -1,0 +1,10 @@
+{
+  "name": "Gana con Ananias: Selector de Pronósticos",
+  "short_name": "Gana con Ananias",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0b1120",
+  "theme_color": "#0f172a",
+  "description": "Gana con Ananias: Selector de Pronósticos 🇺🇸🇻🇪 — Carreras Americanas y Nacionales (Valencia / La Rinconada)",
+  "icons": []
+}
