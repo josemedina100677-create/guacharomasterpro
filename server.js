@@ -704,6 +704,14 @@ app.post('/registrar-lote', (req, res) => {
   const state = computeEngine(draws, defaultDate);
   res.send(renderPage(state, `Lote procesado: ${added} sorteo(s) guardado(s).`));
 });
+// Rutas directas para Gana con Ananias sin afectar "/"
+app.get('/manifest.json', (req, res) => {
+  res.sendFile(path.join(__dirname, 'manifest.json'));
+});
+
+app.get(['/ananias', '/pronosticos', '/index.html'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
 
 app.listen(PORT, () => {
   console.log(`Guácharo Master Pro (V2.9.10) escuchando en puerto ${PORT}`);
