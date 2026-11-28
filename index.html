@@ -1,0 +1,1627 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#0f172a" />
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230f172a'/%3E%3Ccircle cx='32' cy='32' r='22' fill='none' stroke='%2310b981' stroke-width='3'/%3E%3Ctext x='32' y='41' text-anchor='middle' font-size='28'%3E%F0%9F%8F%87%3C/text%3E%3C/svg%3E" />
+<title>Gana con Ananias: Selector de Pronósticos 🇺🇸🇻🇪</title>
+<style>
+  :root {
+    --bg: #0b1120;
+    --card: #131c31;
+    --card-2: #192540;
+    --border: #263554;
+    --text: #f1f5f9;
+    --muted: #94a3b8;
+    --accent: #10b981;
+    --accent-2: #3b82f6;
+    --warn: #f59e0b;
+    --danger: #ef4444;
+    --bomb: #f97316;
+    --calib: #a855f7;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding-bottom: 56px;
+  }
+  header {
+    background: linear-gradient(135deg, #0f172a, #1e293b);
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+  .header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .brand-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .brand-badge {
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    background: rgba(16, 185, 129, 0.16);
+    border: 1px solid rgba(16, 185, 129, 0.45);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+  }
+  header h1 {
+    margin: 0;
+    font-size: 0.94rem;
+    line-height: 1.22;
+  }
+  .status-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .net-pill {
+    font-size: 0.7rem;
+    font-weight: 800;
+    padding: 4px 8px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border: 1px solid transparent;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .net-pill.online {
+    background: rgba(16, 185, 129, 0.16);
+    color: #34d399;
+    border-color: rgba(16, 185, 129, 0.45);
+  }
+  .net-pill.waking {
+    background: rgba(245, 158, 11, 0.18);
+    color: #fcd34d;
+    border-color: rgba(245, 158, 11, 0.5);
+  }
+  .net-pill.offline {
+    background: rgba(239, 68, 68, 0.2);
+    color: #fca5a5;
+    border-color: rgba(239, 68, 68, 0.5);
+  }
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+  .ping-btn {
+    background: var(--card-2);
+    color: #e2e8f0;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 4px 7px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .clock-strip {
+    margin-top: 10px;
+    background: rgba(11, 17, 32, 0.78);
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    padding: 9px 12px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .live-clock {
+    font-variant-numeric: tabular-nums;
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #f8fafc;
+  }
+  .sync-tag {
+    font-size: 0.7rem;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .sync-btn {
+    background: var(--card-2);
+    color: #e2e8f0;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 3px 8px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .countdown-box {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-top: 7px;
+    border-top: 1px solid rgba(38, 53, 84, 0.65);
+    font-size: 0.8rem;
+  }
+  .countdown-val {
+    font-variant-numeric: tabular-nums;
+    font-weight: 800;
+    color: var(--warn);
+  }
+  .countdown-val.urgent { color: var(--danger); }
+  .countdown-val.ok { color: var(--accent); }
+
+  .container { padding: 14px; max-width: 640px; margin: 0 auto; }
+
+  .tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .tab-btn {
+    padding: 12px 10px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--muted);
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+  .tab-btn.active.inh {
+    background: rgba(16, 185, 129, 0.16);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .tab-btn.active.usa {
+    background: rgba(59, 130, 246, 0.18);
+    border-color: var(--accent-2);
+    color: #fff;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+  .card.calibrator-card {
+    border-color: rgba(168, 85, 247, 0.45);
+    background: linear-gradient(180deg, rgba(168, 85, 247, 0.08), var(--card));
+  }
+  .card.calibrator-card.manual-alert {
+    border-color: rgba(245, 158, 11, 0.7);
+    background: linear-gradient(180deg, rgba(245, 158, 11, 0.14), var(--card));
+  }
+  .card-title {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #e2e8f0;
+    margin: 0 0 10px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .api-row { display: flex; gap: 8px; margin-bottom: 6px; }
+  input[type="password"], input[type="text"], input[type="datetime-local"], select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 12px;
+    border-radius: 10px;
+    font-size: 0.86rem;
+  }
+  .btn {
+    border: none;
+    border-radius: 10px;
+    padding: 11px 12px;
+    font-weight: 700;
+    font-size: 0.84rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    text-decoration: none;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #052e16;
+    width: 100%;
+    font-size: 0.95rem;
+    padding: 13px;
+  }
+  .btn-calibrator {
+    background: var(--calib);
+    color: #fff;
+    padding: 9px 12px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+  }
+  .btn-calibrator.manual-ready {
+    background: var(--warn);
+    color: #1e1b08;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.35);
+  }
+  .btn-secondary {
+    background: var(--card-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+  .calib-bar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .calib-profile {
+    background: rgba(11, 17, 32, 0.7);
+    border: 1px solid rgba(168, 85, 247, 0.3);
+    border-radius: 9px;
+    padding: 8px 10px;
+    font-size: 0.76rem;
+    color: #e9d5ff;
+    line-height: 1.38;
+  }
+  .calib-toast {
+    font-size: 0.73rem;
+    color: #c084fc;
+    font-weight: 700;
+    margin-top: 6px;
+    min-height: 16px;
+    line-height: 1.35;
+  }
+  .calib-toast.manual {
+    color: #fcd34d;
+  }
+
+  .media-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .preview-box {
+    border: 1px dashed #334155;
+    border-radius: 12px;
+    padding: 12px;
+    text-align: center;
+    background: rgba(15, 23, 42, 0.55);
+    margin-bottom: 10px;
+  }
+  #previewImg {
+    max-width: 100%;
+    max-height: 290px;
+    border-radius: 10px;
+    display: none;
+    margin: 8px auto 0;
+    border: 1px solid var(--border);
+  }
+  .cond-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .pick-box {
+    background: var(--card-2);
+    border-left: 4px solid var(--accent);
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 10px;
+  }
+  .pick-box.second { border-left-color: var(--accent-2); }
+  .pick-box.longshot { border-left-color: var(--warn); }
+  .pick-box.batacazo {
+    background: rgba(249, 115, 22, 0.11);
+    border: 1px solid rgba(249, 115, 22, 0.45);
+    border-left: 4px solid var(--bomb);
+  }
+  .pick-tag { font-size: 0.72rem; text-transform: uppercase; font-weight: 800; margin-bottom: 4px; }
+  .pick-name { font-size: 1.04rem; font-weight: 800; }
+  .pick-meta { font-size: 0.8rem; color: var(--muted); margin-top: 3px; }
+  .pick-reason { font-size: 0.84rem; margin-top: 6px; line-height: 1.38; color: #e2e8f0; }
+
+  .trend-obs {
+    margin-top: 8px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 0.79rem;
+    line-height: 1.35;
+    background: rgba(11, 17, 32, 0.65);
+    border: 1px solid var(--border);
+  }
+  .trend-obs.up {
+    border-color: rgba(16, 185, 129, 0.45);
+    color: #a7f3d0;
+  }
+  .trend-obs.down {
+    border-color: rgba(239, 68, 68, 0.45);
+    color: #fecaca;
+  }
+  .trend-obs.flat {
+    border-color: rgba(148, 163, 184, 0.35);
+    color: #cbd5e1;
+  }
+
+  .trend-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 999px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+  .trend-badge.up {
+    background: rgba(16, 185, 129, 0.18);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.45);
+  }
+  .trend-badge.down {
+    background: rgba(239, 68, 68, 0.18);
+    color: #fca5a5;
+    border: 1px solid rgba(239, 68, 68, 0.45);
+  }
+  .trend-badge.flat {
+    background: rgba(148, 163, 184, 0.16);
+    color: #cbd5e1;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+  }
+
+  .batacazo-pill {
+    display: inline-block;
+    margin-top: 7px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #fdba74;
+    background: rgba(249, 115, 22, 0.18);
+    border: 1px solid rgba(249, 115, 22, 0.35);
+    padding: 3px 8px;
+    border-radius: 999px;
+  }
+
+  .horse-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 8px;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.83rem;
+    gap: 8px;
+  }
+  .horse-row.excluded { opacity: 0.45; text-decoration: line-through; }
+  .scr-btn {
+    background: rgba(239, 68, 68, 0.16);
+    color: #fca5a5;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    border-radius: 8px;
+    padding: 5px 8px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .loader {
+    display: none;
+    text-align: center;
+    padding: 14px;
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+  .small-note { font-size: 0.74rem; color: var(--muted); line-height: 1.35; }
+  .app-footer {
+    margin-top: 18px;
+    padding: 14px 12px;
+    border-top: 1px solid var(--border);
+    text-align: center;
+    font-size: 0.76rem;
+    color: var(--muted);
+    line-height: 1.45;
+  }
+  .app-footer strong {
+    color: #e2e8f0;
+  }
+  .footer-seal {
+    display: inline-block;
+    margin-bottom: 6px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #6ee7b7;
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <div class="brand-title">
+      <span class="brand-badge" aria-hidden="true">🏇</span>
+      <h1>Gana con Ananias · Selector de Pronósticos 🇺🇸🇻🇪</h1>
+    </div>
+    <div class="status-group">
+      <div id="netBadge" class="net-pill waking">
+        <span class="dot"></span>
+        <span id="netText">Cargando...</span>
+      </div>
+      <button type="button" class="ping-btn" onclick="checkLiveServerStatus(true)" title="Verificar estado en tiempo real">
+        ⚡ Pulso
+      </button>
+    </div>
+  </div>
+
+  <div class="clock-strip">
+    <div>
+      <div id="liveClock" class="live-clock">--:--:--</div>
+      <div id="liveDate" class="small-note">Cargando fecha y hora...</div>
+    </div>
+    <div class="sync-tag">
+      <span id="syncStatus">Reloj local</span>
+      <button type="button" class="sync-btn" onclick="syncNetworkTime()">↻ Sincronizar</button>
+    </div>
+    <div class="countdown-box">
+      <span id="raceCountdownLabel">Carrera: sin hora fijada</span>
+      <span id="raceCountdownVal" class="countdown-val">--:--:--</span>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+
+  <div class="tabs">
+    <button id="tabINH" class="tab-btn active inh" onclick="setBlock('INH')">
+      🇻🇪 Nacional (INH)<br><small>La Rinconada / Valencia (&lt;45d)</small>
+    </button>
+    <button id="tabUSA" class="tab-btn usa" onclick="setBlock('USA')">
+      🇺🇸 Americano (Equibase)<br><small>EE. UU. (&lt;60d)</small>
+    </button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span>📺 Canales en Vivo (YouTube)</span>
+      <span class="small-note">INH / TV / USA</span>
+    </div>
+
+    <div class="media-grid">
+      <a class="btn btn-secondary" href="https://www.youtube.com/@LaTeleTuya/streams" target="_blank" rel="noopener">
+        🇻🇪 La Tele Tuya
+      </a>
+      <a class="btn btn-secondary" href="https://www.youtube.com/c/OficialHinava/playlists" target="_blank" rel="noopener">
+        🏇 Hinava (INH)
+      </a>
+      <a class="btn btn-secondary" href="https://www.youtube.com/@ArrancaTV/streams" target="_blank" rel="noopener">
+        🇺🇸 Arranca TV
+      </a>
+    </div>
+
+    <div class="api-row" style="margin-top:8px;">
+      <input type="text" id="ytStreamInput" placeholder="Pega enlace o ID de un directo de YouTube para ver aquí..." />
+      <button type="button" class="btn btn-secondary" onclick="loadYtEmbed()">Ver</button>
+      <button type="button" class="btn btn-secondary" onclick="clearYtEmbed()">✕</button>
+    </div>
+
+    <div id="ytEmbedBox" style="display:none; margin-top:10px; border-radius:10px; overflow:hidden; border:1px solid var(--border); aspect-ratio:16/9; background:#000;">
+      <iframe id="ytIframe" width="100%" height="100%" style="border:0;" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+    </div>
+    <div class="small-note" style="margin-top:6px;">
+      Toca el canal para abrir su transmisión en vivo; si un directo permite incrustación, pega su enlace aquí y toca <strong>Ver</strong>.
+    </div>
+  </div>
+
+  <div id="calibratorCard" class="card calibrator-card">
+    <div class="card-title">
+      <span>⚖️ Calibrador de Modo de Carrera</span>
+      <span id="activeCalibBadge" style="font-size:0.72rem; color:#d8b4fe;">Modo: AUTO</span>
+    </div>
+
+    <div class="calib-bar">
+      <select id="raceModeSelect" onchange="handleModeSelectionChange()">
+        <option value="AUTO">Auto (calibración automática al subir/analizar)</option>
+        <option value="CORTA">⚡ Carrera Corta (Sprint / Velocidad)</option>
+        <option value="INTERMEDIA">⚖️ Carrera Intermedia (Media Dist. / Pace)</option>
+        <option value="LARGA">🏁 Carrera Larga (Ruta / Fondo / Remate)</option>
+      </select>
+      <button id="calibrateBtn" type="button" class="btn btn-calibrator" onclick="calibrateSystemNow(false, true)">
+        ⚖️ Calibrar
+      </button>
+    </div>
+
+    <div id="calibProfileDesc" class="calib-profile">
+      Automático con señal: al subir o analizar la captura calibra pista, carrera y distancia. Sin señal: usa el botón <strong>Calibrar</strong> para calibración manual.
+    </div>
+    <div id="calibToast" class="calib-toast"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span>🔑 Visión IA (Gemini API)</span>
+      <span id="keyStatus" style="font-size:0.74rem; color:var(--warn);">Sin clave</span>
+    </div>
+    <div class="api-row">
+      <input type="password" id="apiKeyInput" placeholder="Pega tu Gemini API Key..." />
+      <button class="btn btn-secondary" onclick="saveKey()">Guardar</button>
+    </div>
+    <div class="small-note">Guardada en tu navegador. En Nacional se excluyen favoritos de Gaceta/revista, Cátedra y Ranking.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span>📁 Subir Foto / Captura del Teléfono</span>
+      <span id="filterRuleBadge" style="font-size:0.74rem; color:var(--accent);">Corte: &ge;45 días</span>
+    </div>
+
+    <div class="media-grid">
+      <button type="button" class="btn btn-secondary" onclick="document.getElementById('galleryInput').click()">
+        🖼️ Galería/Arch.
+      </button>
+      <button type="button" class="btn btn-secondary" onclick="document.getElementById('cameraInput').click()">
+        📷 Cámara
+      </button>
+      <button type="button" class="btn btn-secondary" onclick="pasteFromClipboard()">
+        📋 Pegar
+      </button>
+    </div>
+
+    <input type="file" id="galleryInput" accept="image/*" style="display:none" onchange="handleFile(event)" />
+    <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none" onchange="handleFile(event)" />
+
+    <div class="preview-box">
+      <div id="placeholderText" class="small-note">
+        Toca <strong>Galería/Arch.</strong> para seleccionar una captura o archivo de tu teléfono, <strong>Cámara</strong> o <strong>Pegar</strong>.
+      </div>
+      <img id="previewImg" alt="Vista previa de captura" />
+    </div>
+
+    <div style="margin-bottom:10px; text-align:right;">
+      <button type="button" class="btn btn-secondary" style="padding:6px 10px; font-size:0.76rem;" onclick="clearImage()">
+        🗑️ Quitar imagen
+      </button>
+    </div>
+
+    <div class="cond-grid">
+      <div>
+        <label class="small-note">Hipódromo</label>
+        <select id="trackSelect" onchange="autoSyncManualChange()">
+          <option value="La Rinconada">La Rinconada</option>
+          <option value="Valencia">Valencia</option>
+        </select>
+      </div>
+      <div>
+        <label class="small-note">Pista / Superficie</label>
+        <select id="surfaceCondition" onchange="autoSyncManualChange()">
+          <option value="Normal / Rápida">Normal / Rápida</option>
+          <option value="Fangosa / Barrosa / Sloppy">Fangosa / Barrosa / Sloppy</option>
+          <option value="Grama / Turf">Grama / Turf</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="margin-bottom:10px;">
+      <label class="small-note">Carrera y distancia detectada / referencia</label>
+      <input type="text" id="raceRefInput" placeholder="Se calibra automáticamente al subir captura (ej: 6.ª Carrera · 1.200m)..." oninput="onRaceRefChange()" />
+    </div>
+
+    <div style="margin-bottom:10px;">
+      <label class="small-note">Selector de Batacazo (señales ocultas / tropiezos / bajada de lote)</label>
+      <select id="batacazoMode" onchange="autoSyncManualChange()">
+        <option value="selective">Selectivo (solo si hay señal fuerte real, no en todas)</option>
+        <option value="strict">Estricto (alta exigencia: tropiezo + lote/rivales fuertes)</option>
+      </select>
+    </div>
+
+    <div style="margin-bottom:10px;">
+      <label class="small-note">Hora de partida de la carrera (auto-detectada o manual)</label>
+      <div style="display:flex; gap:8px; margin-top:4px;">
+        <input type="datetime-local" id="raceStartInput" onchange="updateCountdown()" />
+        <button type="button" class="btn btn-secondary" style="padding:8px 10px; font-size:0.76rem;" onclick="clearRaceStart()">Limpiar</button>
+      </div>
+    </div>
+
+    <div style="margin-bottom:10px;">
+      <input type="text" id="extraNotes" placeholder="Retirados, trabajos, pace o novedades (ej: #1 buen apronte, #5 baja lote)..." />
+    </div>
+
+    <button id="analyzeBtn" class="btn btn-primary" onclick="analyzeScreenshot()">
+      ⚡ Analizar Captura y Calcular Pronósticos
+    </button>
+
+    <div id="loader" class="loader">
+      ⏳ Calibrando automáticamente y calculando pronósticos...
+    </div>
+  </div>
+
+  <div id="resultsSection" style="display:none;">
+    <div class="card">
+      <div class="card-title">
+        <span id="raceHeaderTitle">🎯 Selección Calibrada</span>
+      </div>
+      <div id="picksContainer"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span>📋 Ejemplares • Ascenso / Descenso / Retiro</span>
+      </div>
+      <div id="horsesTable"></div>
+      <p class="small-note" style="margin-top:10px;">
+        *Análisis probabilístico basado en los datos de la captura y las reglas calibradas. No garantiza resultados.
+      </p>
+    </div>
+  </div>
+
+  <footer class="app-footer">
+    <div class="footer-seal">🏇 Gana con Ananias</div><br>
+    Creado por <strong>Ananias Medina</strong>, pronosticador hípico<br>
+    Carreras Americanas y Nacionales • Valencia — La Rinconada
+  </footer>
+
+</div>
+
+<script>
+  const CALIBRATION_PROFILES = {
+    AUTO: {
+      label: 'AUTO',
+      desc: 'Automático con señal: al subir o analizar la captura calibra pista, carrera y distancia. Sin señal: usa el botón Calibrar para calibración manual.',
+      weights: { base: 0.72, trend: 0.14, batacazo: 0.14 },
+      batacazoBonus: 1.0
+    },
+    CORTA: {
+      label: 'CORTA (SPRINT)',
+      desc: 'Calibración Sprint: pesa más velocidad inicial, parciales rápidos, consistencia de cifras, puesto de salida y dinámica de pista (Valencia o sprints rápidos).',
+      weights: { base: 0.74, trend: 0.14, batacazo: 0.12 },
+      batacazoBonus: 1.0
+    },
+    INTERMEDIA: {
+      label: 'INTERMEDIA (MEDIA DIST.)',
+      desc: 'Calibración Intermedia: equilibra colocación táctica (pace), cambios de distancia (cutback/stretch-out), clase/lote y fortaleza en el tramo decisivo.',
+      weights: { base: 0.70, trend: 0.16, batacazo: 0.14 },
+      batacazoBonus: 1.05
+    },
+    LARGA: {
+      label: 'LARGA (RUTA / FONDO)',
+      desc: 'Calibración Ruta/Fondo: pesa más fondo/resistencia, remate en la recta final, consistencia en distancia, stretch-out comprobado y control de ritmo.',
+      weights: { base: 0.68, trend: 0.17, batacazo: 0.15 },
+      batacazoBonus: 1.08
+    }
+  };
+
+  let currentBlock = 'INH';
+  let currentImageBase64 = null;
+  let currentImageMime = 'image/jpeg';
+  let extractedHorses = [];
+  let raceSummary = {};
+  let clockOffsetMs = 0;
+  let isCheckingServer = false;
+  let hasSignal = Boolean(navigator.onLine);
+
+  window.onload = () => {
+    const saved = localStorage.getItem('gemini_hipico_key');
+    if (saved) {
+      document.getElementById('apiKeyInput').value = saved;
+      document.getElementById('keyStatus').textContent = 'Conectada ✓';
+      document.getElementById('keyStatus').style.color = '#10b981';
+    }
+    updateBlockUI();
+    onRaceModeChange();
+    refreshManualModeVisuals();
+    checkLiveServerStatus(true);
+    syncNetworkTime();
+    setInterval(tickClock, 1000);
+    setInterval(() => checkLiveServerStatus(false), 12000);
+  };
+
+  window.addEventListener('online', () => {
+    hasSignal = true;
+    refreshManualModeVisuals();
+    checkLiveServerStatus(true);
+    syncNetworkTime();
+  });
+
+  window.addEventListener('offline', () => {
+    activateManualFallback('Sin señal de red: usa el botón "Calibrar" para calibrar manualmente.');
+  });
+
+  function refreshManualModeVisuals() {
+    const card = document.getElementById('calibratorCard');
+    const btn = document.getElementById('calibrateBtn');
+    const toast = document.getElementById('calibToast');
+
+    if (!hasSignal) {
+      card.classList.add('manual-alert');
+      btn.classList.add('manual-ready');
+      toast.classList.add('manual');
+    } else {
+      card.classList.remove('manual-alert');
+      btn.classList.remove('manual-ready');
+      toast.classList.remove('manual');
+    }
+  }
+
+  function activateManualFallback(reasonMsg) {
+    hasSignal = false;
+    setServerBadge('offline', 'Sin señal · Manual');
+    refreshManualModeVisuals();
+    document.getElementById('calibToast').textContent =
+      `⚠️ ${reasonMsg || 'Sin señal: calibración manual habilitada con el botón Calibrar.'}`;
+  }
+
+  function extractYouTubeId(input) {
+    if (!input) return null;
+    const trimmed = input.trim();
+    if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) return trimmed;
+    const match = trimmed.match(/(?:v=|\/live\/|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/);
+    return match ? match[1] : null;
+  }
+
+  function loadYtEmbed() {
+    const raw = document.getElementById('ytStreamInput').value;
+    const vid = extractYouTubeId(raw);
+    if (!vid) {
+      return alert('Pega un enlace válido de video/directo de YouTube o su ID de 11 caracteres.');
+    }
+    document.getElementById('ytIframe').src = `https://www.youtube.com/embed/${vid}?autoplay=1`;
+    document.getElementById('ytEmbedBox').style.display = 'block';
+  }
+
+  function clearYtEmbed() {
+    document.getElementById('ytStreamInput').value = '';
+    document.getElementById('ytIframe').src = '';
+    document.getElementById('ytEmbedBox').style.display = 'none';
+  }
+
+  function inferModeFromText(text) {
+    const info = String(text || '').toLowerCase();
+    const metrosMatch = info.match(/(\d{3,4})\s*(m|metros)\b/);
+    if (metrosMatch) {
+      const m = parseInt(metrosMatch[1], 10);
+      if (m <= 1200) return 'CORTA';
+      if (m <= 1650) return 'INTERMEDIA';
+      return 'LARGA';
+    }
+
+    const furlongMatch = info.match(/(\d+(?:\.\d+)?)\s*(f|furlongs?)\b/);
+    if (furlongMatch) {
+      const f = parseFloat(furlongMatch[1]);
+      if (f <= 6) return 'CORTA';
+      if (f < 8) return 'INTERMEDIA';
+      return 'LARGA';
+    }
+
+    if (/\b(route|ruta|fondo|classic|derby|cup|staying|1\s*1\/16|1\s*1\/8|1\s*1\/4|1\s*1\/2)\b/.test(info)) {
+      return 'LARGA';
+    }
+    return null;
+  }
+
+  function detectEffectiveMode() {
+    const selected = document.getElementById('raceModeSelect').value;
+    if (selected !== 'AUTO') return selected;
+
+    const refText = document.getElementById('raceRefInput').value;
+    const inferred = inferModeFromText(`${refText} ${raceSummary.carrera_info || ''}`);
+    return inferred || 'INTERMEDIA';
+  }
+
+  function onRaceModeChange() {
+    const mode = document.getElementById('raceModeSelect').value;
+    const prof = CALIBRATION_PROFILES[mode] || CALIBRATION_PROFILES.AUTO;
+    const eff = detectEffectiveMode();
+    document.getElementById('activeCalibBadge').textContent =
+      mode === 'AUTO' ? `Modo: AUTO → ${eff}` : `Modo: ${prof.label}`;
+    document.getElementById('calibProfileDesc').textContent = prof.desc;
+  }
+
+  function handleModeSelectionChange() {
+    onRaceModeChange();
+    if (hasSignal && extractedHorses.length) {
+      calibrateSystemNow(true, false);
+    } else if (!hasSignal) {
+      document.getElementById('calibToast').textContent =
+        '⚠️ Sin señal: toca "Calibrar" para aplicar este modo manualmente.';
+    }
+  }
+
+  function autoSyncManualChange() {
+    onRaceModeChange();
+    if (hasSignal && extractedHorses.length) {
+      calibrateSystemNow(true, false);
+    }
+  }
+
+  function onRaceRefChange() {
+    raceSummary.carrera_info = document.getElementById('raceRefInput').value;
+    onRaceModeChange();
+    if (hasSignal && extractedHorses.length) {
+      calibrateSystemNow(true, false);
+    }
+  }
+
+  function applySurfaceFromHint(hint) {
+    const s = String(hint || '').toLowerCase();
+    const sel = document.getElementById('surfaceCondition');
+    if (!s) return;
+    if (/fang|barr|sloppy|mud|pesad|wet|soft|heavy|yield/.test(s)) {
+      sel.value = 'Fangosa / Barrosa / Sloppy';
+    } else if (/grama|turf|césped|cesped/.test(s)) {
+      sel.value = 'Grama / Turf';
+    } else if (/normal|rápid|rapid|fast|arena|dirt|seca/.test(s)) {
+      sel.value = 'Normal / Rápida';
+    }
+  }
+
+  async function autoCalibrateFromImage() {
+    const apiKey = document.getElementById('apiKeyInput').value.trim();
+    if (!currentImageBase64) return;
+
+    const inferredLocal = inferModeFromText(document.getElementById('raceRefInput').value);
+    if (inferredLocal && document.getElementById('raceModeSelect').value === 'AUTO') {
+      document.getElementById('activeCalibBadge').textContent = `Modo: AUTO → ${inferredLocal}`;
+    }
+
+    if (!navigator.onLine || !hasSignal) {
+      activateManualFallback('Sin señal al subir imagen: ajusta pista/distancia y toca "Calibrar".');
+      return;
+    }
+
+    if (!apiKey) {
+      document.getElementById('calibToast').textContent =
+        'ℹ️ Imagen cargada (sin API Key para pre-lectura automática; se calibrará al analizar o con Calibrar).';
+      return;
+    }
+
+    document.getElementById('calibToast').textContent =
+      '⚡ Calibrando automáticamente carrera, distancia y estado de pista...';
+
+    const prompt = `Lee la cabecera, distancia y estado de pista de esta captura de carrera de caballos.
+Devuelve ÚNICAMENTE un JSON válido:
+{
+  "carrera_info": "Carrera y distancia (ej: 6.ª Carrera - 1.200m)",
+  "distancia_texto": "Distancia si aparece (ej: 1200m o 6f)",
+  "modo_sugerido": "CORTA | INTERMEDIA | LARGA",
+  "estado_pista": "Normal / Rápida | Fangosa / Barrosa / Sloppy | Grama / Turf",
+  "hora_carrera": "Hora si aparece o vacío"
+}`;
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 12000);
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { text: prompt },
+                { inline_data: { mime_type: currentImageMime, data: currentImageBase64 } }
+              ]
+            }],
+            generationConfig: {
+              temperature: 0.1,
+              response_mime_type: "application/json"
+            }
+          })
+        }
+      );
+      clearTimeout(timeoutId);
+
+      const data = await response.json();
+      if (data.error) throw new Error(data.error.message);
+
+      hasSignal = true;
+      refreshManualModeVisuals();
+
+      const meta = JSON.parse(data.candidates[0].content.parts[0].text);
+      const combinedRef = [meta.carrera_info, meta.distancia_texto].filter(Boolean).join(' · ');
+      if (combinedRef) {
+        document.getElementById('raceRefInput').value = combinedRef;
+        raceSummary.carrera_info = combinedRef;
+      }
+      if (meta.estado_pista) {
+        applySurfaceFromHint(meta.estado_pista);
+      }
+      if (!document.getElementById('raceStartInput').value && meta.hora_carrera) {
+        trySetRaceTimeFromText(meta.hora_carrera);
+      }
+
+      const suggested = String(meta.modo_sugerido || '').toUpperCase();
+      const inferred = ['CORTA', 'INTERMEDIA', 'LARGA'].includes(suggested)
+        ? suggested
+        : (inferModeFromText(combinedRef) || 'INTERMEDIA');
+
+      if (document.getElementById('raceModeSelect').value === 'AUTO') {
+        document.getElementById('activeCalibBadge').textContent = `Modo: AUTO → ${inferred}`;
+      }
+
+      document.getElementById('calibToast').textContent =
+        `✓ Calibrado automáticamente → Modo: ${inferred} | Pista: ${document.getElementById('surfaceCondition').value}${combinedRef ? ' | ' + combinedRef : ''}`;
+
+      if (extractedHorses.length) {
+        calibrateSystemNow(true, false);
+      }
+    } catch {
+      activateManualFallback('Señal interrumpida al calibrar imagen: usa el botón "Calibrar" manualmente.');
+    }
+  }
+
+  function calibrateSystemNow(silent = false, isManualButton = false) {
+    onRaceModeChange();
+
+    if (!extractedHorses.length) {
+      if (!silent) {
+        const msg = hasSignal
+          ? '✓ Calibrador listo: se aplicará automáticamente al analizar o subir captura.'
+          : '✓ Calibración manual aplicada a pista/modo/distancia para la próxima carrera.';
+        document.getElementById('calibToast').textContent = msg;
+      }
+      return;
+    }
+
+    const eff = detectEffectiveMode();
+    const prof = CALIBRATION_PROFILES[eff] || CALIBRATION_PROFILES.INTERMEDIA;
+    const cond = document.getElementById('surfaceCondition').value;
+    const isMuddy = /fang|barr|sloppy/i.test(cond);
+    const isTurf = /grama|turf/i.test(cond);
+
+    extractedHorses.forEach(h => {
+      const rawScore = Number(h.puntaje_base ?? h.puntaje) || 0;
+      h.puntaje_base = rawScore;
+
+      let trendAdj = 0;
+      if (h.tendencia === 'ASCENSO') trendAdj = h.buenos_trabajos ? 5.5 : 3.5;
+      else if (h.tendencia === 'DESCENSO') trendAdj = -4.5;
+
+      let batAdj = 0;
+      const signals = [h.tropiezo_encierro, h.bajada_escondido, h.rivales_fuertes_previos].filter(Boolean).length;
+      if (!h.falsa_apariencia && h.batacazo_fuerza >= 65 && signals >= 1) {
+        batAdj = ((h.batacazo_fuerza - 60) / 10) * prof.batacazoBonus;
+      }
+
+      let trackCondAdj = 0;
+      if (isMuddy && eff === 'CORTA') trackCondAdj = 1.5;
+      if (isTurf && eff === 'LARGA') trackCondAdj = 1.5;
+
+      const calibrated = Math.max(
+        1,
+        Math.min(99, Math.round(rawScore * (prof.weights.base / 0.72) + trendAdj + batAdj + trackCondAdj))
+      );
+      h.puntaje = calibrated;
+    });
+
+    renderResults();
+
+    if (!silent) {
+      const originLabel = isManualButton && !hasSignal ? 'CALIBRACIÓN MANUAL' : 'CALIBRACIÓN';
+      document.getElementById('calibToast').textContent =
+        `✓ ${originLabel} aplicada (${prof.label} · ${cond}) sobre ${extractedHorses.length} ejemplares.`;
+    }
+  }
+
+  function setServerBadge(state, label) {
+    const badge = document.getElementById('netBadge');
+    const text = document.getElementById('netText');
+    badge.className = `net-pill ${state}`;
+    text.textContent = label;
+  }
+
+  async function checkLiveServerStatus(manual) {
+    if (isCheckingServer) return;
+    if (!navigator.onLine) {
+      activateManualFallback('Sin señal de red: calibración manual activa.');
+      return;
+    }
+
+    isCheckingServer = true;
+    if (manual) {
+      setServerBadge('waking', 'Cargando / Despertando...');
+    }
+
+    const wakeTimer = setTimeout(() => {
+      setServerBadge('waking', 'Cargando / Despertando...');
+    }, 1400);
+
+    const t0 = performance.now();
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 9000);
+      const resp = await fetch(window.location.href, {
+        method: 'GET',
+        cache: 'no-store',
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      clearTimeout(wakeTimer);
+
+      const latency = Math.max(1, Math.round(performance.now() - t0));
+      const dateHeader = resp.headers.get('Date');
+      if (dateHeader) {
+        const serverMs = new Date(dateHeader).getTime();
+        if (!Number.isNaN(serverMs)) {
+          clockOffsetMs = serverMs - Date.now();
+          document.getElementById('syncStatus').textContent = 'Sincronizada (red)';
+        }
+      }
+
+      if (resp.ok) {
+        hasSignal = true;
+        refreshManualModeVisuals();
+        setServerBadge('online', `En línea · Cargada (${latency}ms)`);
+      } else {
+        setServerBadge('waking', `Cargando · HTTP ${resp.status}`);
+      }
+    } catch {
+      clearTimeout(wakeTimer);
+      activateManualFallback('No hay señal con el servidor: usa el botón "Calibrar" manualmente.');
+    } finally {
+      isCheckingServer = false;
+    }
+  }
+
+  async function syncNetworkTime() {
+    const syncEl = document.getElementById('syncStatus');
+    if (!navigator.onLine) {
+      syncEl.textContent = 'Sin red (hora local)';
+      return;
+    }
+    try {
+      const t0 = Date.now();
+      const resp = await fetch(window.location.href, { method: 'HEAD', cache: 'no-store' });
+      const dateHeader = resp.headers.get('Date');
+      if (dateHeader) {
+        const serverMs = new Date(dateHeader).getTime();
+        const rtt = Date.now() - t0;
+        if (!Number.isNaN(serverMs)) {
+          clockOffsetMs = (serverMs + rtt / 2) - Date.now();
+          syncEl.textContent = 'Sincronizada (red)';
+          tickClock();
+          return;
+        }
+      }
+      syncEl.textContent = 'Hora local';
+    } catch {
+      syncEl.textContent = 'Hora local';
+    }
+  }
+
+  function getSyncedNow() {
+    return new Date(Date.now() + clockOffsetMs);
+  }
+
+  function tickClock() {
+    const now = getSyncedNow();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    const ss = String(now.getSeconds()).padStart(2, '0');
+    document.getElementById('liveClock').textContent = `${hh}:${mm}:${ss}`;
+    document.getElementById('liveDate').textContent = now.toLocaleDateString('es-VE', {
+      weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric'
+    });
+    updateCountdown(now);
+  }
+
+  function clearRaceStart() {
+    document.getElementById('raceStartInput').value = '';
+    updateCountdown();
+  }
+
+  function updateCountdown(nowArg) {
+    const inputVal = document.getElementById('raceStartInput').value;
+    const labelEl = document.getElementById('raceCountdownLabel');
+    const valEl = document.getElementById('raceCountdownVal');
+
+    if (!inputVal) {
+      labelEl.textContent = 'Carrera: sin hora fijada';
+      valEl.textContent = '--:--:--';
+      valEl.className = 'countdown-val';
+      return;
+    }
+
+    const target = new Date(inputVal);
+    if (Number.isNaN(target.getTime())) {
+      labelEl.textContent = 'Carrera: hora inválida';
+      valEl.textContent = '--:--:--';
+      valEl.className = 'countdown-val';
+      return;
+    }
+
+    const now = nowArg || getSyncedNow();
+    const diffMs = target.getTime() - now.getTime();
+    const raceTitle = raceSummary.carrera_info || document.getElementById('raceRefInput').value || 'Próxima carrera';
+
+    if (diffMs <= 0) {
+      const elapsedSec = Math.floor(Math.abs(diffMs) / 1000);
+      const eMin = Math.floor(elapsedSec / 60);
+      labelEl.textContent = `${raceTitle} (hace ${eMin} min)`;
+      valEl.textContent = 'EN CURSO / PASÓ';
+      valEl.className = 'countdown-val urgent';
+      return;
+    }
+
+    const totalSec = Math.floor(diffMs / 1000);
+    const hrs = Math.floor(totalSec / 3600);
+    const mins = Math.floor((totalSec % 3600) / 60);
+    const secs = totalSec % 60;
+
+    labelEl.textContent = `Falta para ${raceTitle}:`;
+    valEl.textContent = `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+    if (totalSec <= 300) {
+      valEl.className = 'countdown-val urgent';
+    } else if (totalSec <= 900) {
+      valEl.className = 'countdown-val';
+    } else {
+      valEl.className = 'countdown-val ok';
+    }
+  }
+
+  function trySetRaceTimeFromText(horaStr) {
+    if (!horaStr) return;
+    const match12 = horaStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+    const match24 = horaStr.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/);
+    let hours = null, minutes = null;
+
+    if (match12) {
+      hours = parseInt(match12[1], 10);
+      minutes = parseInt(match12[2], 10);
+      const meridiem = match12[3].toUpperCase();
+      if (meridiem === 'PM' && hours < 12) hours += 12;
+      if (meridiem === 'AM' && hours === 12) hours = 0;
+    } else if (match24) {
+      hours = parseInt(match24[1], 10);
+      minutes = parseInt(match24[2], 10);
+    }
+
+    if (hours !== null && minutes !== null) {
+      const now = getSyncedNow();
+      const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0);
+      const y = target.getFullYear();
+      const m = String(target.getMonth() + 1).padStart(2, '0');
+      const d = String(target.getDate()).padStart(2, '0');
+      const hh = String(target.getHours()).padStart(2, '0');
+      const mm = String(target.getMinutes()).padStart(2, '0');
+      document.getElementById('raceStartInput').value = `${y}-${m}-${d}T${hh}:${mm}`;
+      updateCountdown();
+    }
+  }
+
+  function saveKey() {
+    const val = document.getElementById('apiKeyInput').value.trim();
+    if (!val) return alert('Pega una clave válida.');
+    localStorage.setItem('gemini_hipico_key', val);
+    document.getElementById('keyStatus').textContent = 'Conectada ✓';
+    document.getElementById('keyStatus').style.color = '#10b981';
+    alert('Clave guardada en este teléfono.');
+  }
+
+  function setBlock(block) {
+    currentBlock = block;
+    updateBlockUI();
+    if (hasSignal && extractedHorses.length) {
+      calibrateSystemNow(true, false);
+    }
+  }
+
+  function updateBlockUI() {
+    const isINH = currentBlock === 'INH';
+    document.getElementById('tabINH').classList.toggle('active', isINH);
+    document.getElementById('tabUSA').classList.toggle('active', !isINH);
+    document.getElementById('filterRuleBadge').textContent = isINH ? 'Corte: ≥45 días' : 'Corte: ≥60 días';
+
+    const trackSel = document.getElementById('trackSelect');
+    if (isINH) {
+      trackSel.innerHTML = `
+        <option value="La Rinconada">La Rinconada</option>
+        <option value="Valencia">Valencia</option>
+      `;
+    } else {
+      trackSel.innerHTML = `
+        <option value="Gulfstream Park">Gulfstream Park</option>
+        <option value="Del Mar">Del Mar</option>
+        <option value="Santa Anita">Santa Anita</option>
+        <option value="Zia Park">Zia Park</option>
+        <option value="Otro Hipódromo USA">Otro Hipódromo USA</option>
+      `;
+    }
+  }
+
+  function handleFile(event) {
+    const file = event.target.files[0];
+    if (file) loadFileObject(file);
+  }
+
+  function loadFileObject(file) {
+    currentImageMime = file.type || 'image/jpeg';
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target.result;
+      currentImageBase64 = dataUrl.split(',')[1];
+      const img = document.getElementById('previewImg');
+      img.src = dataUrl;
+      img.style.display = 'block';
+      document.getElementById('placeholderText').style.display = 'none';
+      autoCalibrateFromImage();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function pasteFromClipboard() {
+    try {
+      const items = await navigator.clipboard.read();
+      for (const item of items) {
+        const imageType = item.types.find(t => t.startsWith('image/'));
+        if (imageType) {
+          const blob = await item.getType(imageType);
+          loadFileObject(blob);
+          return;
+        }
+      }
+      alert('No hay ninguna imagen en el portapapeles. Usa "Galería/Arch." para elegir tu captura.');
+    } catch (err) {
+      alert('Usa el botón "Galería/Arch." para seleccionar la captura desde tu teléfono.');
+    }
+  }
+
+  function clearImage() {
+    currentImageBase64 = null;
+    document.getElementById('previewImg').style.display = 'none';
+    document.getElementById('placeholderText').style.display = 'block';
+    document.getElementById('galleryInput').value = '';
+    document.getElementById('cameraInput').value = '';
+    document.getElementById('resultsSection').style.display = 'none';
+    document.getElementById('calibToast').textContent = '';
+  }
+
+  async function analyzeScreenshot() {
+    if (!navigator.onLine) {
+      activateManualFallback('No hay señal de red. Si ya tienes una carrera cargada, usa "Calibrar" para recalcular manualmente.');
+      return alert('No hay señal de internet en este momento. Revisa tu conexión o usa el botón "Calibrar" para calibración manual.');
+    }
+
+    const apiKey = document.getElementById('apiKeyInput').value.trim();
+    if (!apiKey) return alert('Primero guarda tu Gemini API Key arriba.');
+    if (!currentImageBase64) return alert('Selecciona o pega una captura/foto de la carrera.');
+
+    const btn = document.getElementById('analyzeBtn');
+    const loader = document.getElementById('loader');
+    btn.disabled = true;
+    loader.style.display = 'block';
+
+    const track = document.getElementById('trackSelect').value;
+    const cond = document.getElementById('surfaceCondition').value;
+    const raceRef = document.getElementById('raceRefInput').value.trim();
+    const notes = document.getElementById('extraNotes').value.trim();
+    const selectedMode = document.getElementById('raceModeSelect').value;
+
+    const blockRules = currentBlock === 'INH'
+      ? `BLOQUE NACIONAL (Venezuela - ${track}):
+- REGLA DURA DE INACTIVIDAD: Cualquier ejemplar con 45 días o más (>= 45 días) sin correr debe marcarse "descartado_paro": true y NO ser seleccionado como marca ni batacazo.
+- EXCLUSIÓN TOTAL: IGNORA por completo 1er, 2do o 3er favorito de Gaceta Hípica o revistas, Cátedra y Ranking.
+- Dinámica de pista: Si es La Rinconada, pondera recta larga, remate final y fondo; si es Valencia, pondera salida, dinamismo/parciales y velocidad en pista rápida. Evalúa kilos efectivos vs lote, cambios de implementos/monta en contexto y condición de pista.`
+      : `BLOQUE AMERICANO (EE.UU. - ${track}):
+- REGLA DURA DE INACTIVIDAD: Cualquier ejemplar con 60 días o más (>= 60 días) sin correr debe marcarse "descartado_paro": true y NO ser seleccionado como marca ni batacazo.
+- Evalúa Speed Figures (consistencia de cifras, no solo un pico aislado), ritmo/pace (E/E-P/P/S y presión de punta vs rematadores), clase/claiming drops/steps, superficie (dirt/turf/synthetic/off-turf) y cambios de distancia (cutback/stretch-out).`;
+
+    const modeCalibrationInstruction = `CALIBRACIÓN DE MODO DE CARRERA (${selectedMode}):
+Ajusta los criterios según la distancia, la carrera y el estado de pista (${cond}):
+- CORTA (sprint / hasta ~1.200m o 6f): enfatiza explosión inicial, parciales tempranos, puesto y consistencia en velocidad.
+- INTERMEDIA (~1.201m a 1.650m): equilibra pace/colocación, cutback/stretch-out, clase y sostenimiento en la recta.
+- LARGA (ruta / fondo / >1.650m): enfatiza fondo/resistencia, remate final, consistencia en distancia y control de ritmo.`;
+
+    const trendAndBatacazoRules = `ASCENSO / DESCENSO Y BATACAZO SELECTIVO:
+- Tendencia: "ASCENSO", "DESCENSO" o "ESTABLE", más "buenos_trabajos" (true/false por ejercicios/aprontes/workouts) y "observacion_tendencia".
+- Batacazo selectivo (solo si hay señal real): "tropiezo_encierro", "bajada_escondido", "rivales_fuertes_previos", "falsa_apariencia" (true si el mal rendimiento previo obedece a caída física o deterioro severo sin compensación), "batacazo_fuerza" (0-100, solo >=65 si hay señal fuerte real) y "batacazo_motivo".`;
+
+    const prompt = `Analiza esta captura de carrera. Hipódromo: ${track}, Pista: ${cond}, Referencia carrera/distancia: "${raceRef || 'Detectar de la imagen'}". Novedades del usuario: "${notes || 'Ninguna'}".
+${blockRules}
+
+${modeCalibrationInstruction}
+
+${trendAndBatacazoRules}
+
+Devuelve ÚNICAMENTE un JSON válido con esta estructura:
+{
+  "carrera_info": "Título de la carrera y distancia",
+  "modo_detectado": "CORTA | INTERMEDIA | LARGA",
+  "estado_pista": "Normal / Rápida | Fangosa / Barrosa / Sloppy | Grama / Turf",
+  "hora_carrera": "Hora programada si aparece en la captura (ej: 01:00 PM o 4:00 PM) o vacío",
+  "caballos": [
+    {
+      "numero": "1",
+      "nombre": "NOMBRE",
+      "jinete": "Jinete",
+      "entrenador": "Entrenador",
+      "dias_sin_correr": 15,
+      "descartado_paro": false,
+      "retirado": false,
+      "puntaje": 85,
+      "razon_tecnica": "Explicación técnica breve con pace, distancia, pista/lote o cifras",
+      "tendencia": "ASCENSO",
+      "buenos_trabajos": true,
+      "observacion_tendencia": "Observación sobre ascenso/descenso y trabajos/ejercicios",
+      "tropiezo_encierro": false,
+      "bajada_escondido": false,
+      "rivales_fuertes_previos": false,
+      "falsa_apariencia": false,
+      "batacazo_fuerza": 0,
+      "batacazo_motivo": ""
+    }
+  ]
+}`;
+
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { text: prompt },
+                { inline_data: { mime_type: currentImageMime, data: currentImageBase64 } }
+              ]
+            }],
+            generationConfig: {
+              temperature: 0.2,
+              response_mime_type: "application/json"
+            }
+          })
+        }
+      );
+
+      const data = await response.json();
+      if (data.error) throw new Error(data.error.message);
+
+      hasSignal = true;
+      refreshManualModeVisuals();
+      setServerBadge('online', 'En línea · Calibrado');
+
+      const parsed = JSON.parse(data.candidates[0].content.parts[0].text);
+      const maxDays = currentBlock === 'INH' ? 45 : 60;
+
+      raceSummary = parsed;
+      if (parsed.carrera_info) {
+        document.getElementById('raceRefInput').value = parsed.carrera_info;
+      }
+      if (parsed.estado_pista) {
+        applySurfaceFromHint(parsed.estado_pista);
+      }
+
+      if (document.getElementById('raceModeSelect').value === 'AUTO' && parsed.modo_detectado) {
+        const det = String(parsed.modo_detectado).toUpperCase();
+        if (['CORTA', 'INTERMEDIA', 'LARGA'].includes(det)) {
+          document.getElementById('activeCalibBadge').textContent = `Modo: AUTO → ${det}`;
+        }
+      }
+
+      if (!document.getElementById('raceStartInput').value && parsed.hora_carrera) {
+        trySetRaceTimeFromText(parsed.hora_carrera);
+      } else {
+        updateCountdown();
+      }
+
+      extractedHorses = (parsed.caballos || []).map(h => {
+        const days = Number(h.dias_sin_correr);
+        const byDays = !Number.isNaN(days) && days >= maxDays;
+        const rawTrend = String(h.tendencia || 'ESTABLE').toUpperCase();
+        const tendencia = ['ASCENSO', 'DESCENSO', 'ESTABLE'].includes(rawTrend) ? rawTrend : 'ESTABLE';
+        const basePt = Number(h.puntaje) || 0;
+        return {
+          ...h,
+          descartado_paro: Boolean(h.descartado_paro || byDays),
+          retirado: Boolean(h.retirado),
+          puntaje_base: basePt,
+          puntaje: basePt,
+          tendencia,
+          buenos_trabajos: Boolean(h.buenos_trabajos),
+          observacion_tendencia: h.observacion_tendencia || '',
+          tropiezo_encierro: Boolean(h.tropiezo_encierro),
+          bajada_escondido: Boolean(h.bajada_escondido),
+          rivales_fuertes_previos: Boolean(h.rivales_fuertes_previos),
+          falsa_apariencia: Boolean(h.falsa_apariencia),
+          batacazo_fuerza: Number(h.batacazo_fuerza) || 0,
+          batacazo_motivo: h.batacazo_motivo || ''
+        };
+      });
+
+      calibrateSystemNow(true, false);
+      document.getElementById('calibToast').textContent =
+        `✓ Calibración automática completada (${detectEffectiveMode()} · ${document.getElementById('surfaceCondition').value}).`;
+    } catch (err) {
+      activateManualFallback('Se perdió la señal durante el análisis: usa "Calibrar" para calibrar manualmente.');
+      alert('Error o pérdida de señal al analizar: ' + err.message);
+    } finally {
+      btn.disabled = false;
+      loader.style.display = 'none';
+    }
+  }
+
+  function toggleScratch(index) {
+    extractedHorses[index].retirado = !extractedHorses[index].retirado;
+    renderResults();
+  }
+
+  function getTrendMeta(horse) {
+    if (horse.tendencia === 'ASCENSO') {
+      return {
+        cls: 'up',
+        badge: '↗ ASCENSO',
+        obs: horse.observacion_tendencia || (horse.buenos_trabajos
+          ? 'Respaldo de ascenso: mejora progresiva y buenos trabajos/ejercicios.'
+          : 'En ascenso en su campaña reciente.')
+      };
+    }
+    if (horse.tendencia === 'DESCENSO') {
+      return {
+        cls: 'down',
+        badge: '↘ DESCENSO',
+        obs: horse.observacion_tendencia || 'En descenso / retroceso reciente en cifras o rendimiento.'
+      };
+    }
+    return {
+      cls: 'flat',
+      badge: '→ ESTABLE',
+      obs: horse.observacion_tendencia || 'Tendencia estable sin salto marcado ni caída.'
+    };
+  }
+
+  function selectBatacazo(eligible, topIds) {
+    const mode = document.getElementById('batacazoMode').value;
+    const minScore = mode === 'strict' ? 75 : 65;
+
+    const candidates = eligible
+      .filter(h => {
+        if (h.falsa_apariencia) return false;
+        const signals = [h.tropiezo_encierro, h.bajada_escondido, h.rivales_fuertes_previos].filter(Boolean).length;
+        const hasEnoughSignals = mode === 'strict' ? signals >= 2 : signals >= 1;
+        return hasEnoughSignals && h.batacazo_fuerza >= minScore;
+      })
+      .sort((a, b) => b.batacazo_fuerza - a.batacazo_fuerza);
+
+    if (!candidates.length) return null;
+    const nonTop = candidates.find(h => !topIds.has(String(h.numero)));
+    return nonTop || candidates[0];
+  }
+
+  function buildPickCardHtml(horse, tagText, tagColor, boxClass) {
+    const t = getTrendMeta(horse);
+    const workNote = horse.buenos_trabajos ? ' • 💪 Buenos trabajos/ejercicios' : '';
+    return `
+      <div class="pick-box ${boxClass}">
+        <div class="pick-tag" style="color:${tagColor};">${tagText} • Prob: ${horse.prob}%</div>
+        <div class="pick-name">#${horse.numero} ${horse.nombre} (${horse.puntaje} pts) <span class="trend-badge ${t.cls}">${t.badge}</span></div>
+        <div class="pick-meta">J: ${horse.jinete || '-'} | E: ${horse.entrenador || '-'}${workNote}</div>
+        <div class="pick-reason">${horse.razon_tecnica}</div>
+        <div class="trend-obs ${t.cls}"><strong>Observación de tendencia:</strong> ${t.obs}</div>
+      </div>
+    `;
+  }
+
+  function renderResults() {
+    const eligible = extractedHorses
+      .filter(h => !h.retirado && !h.descartado_paro)
+      .sort((a, b) => b.puntaje - a.puntaje);
+
+    const total = eligible.reduce((acc, h) => acc + (Number(h.puntaje) || 0), 0) || 1;
+    eligible.forEach(h => {
+      h.prob = Math.round(((Number(h.puntaje) || 0) / total) * 100);
+    });
+
+    const effMode = detectEffectiveMode();
+    const cond = document.getElementById('surfaceCondition').value;
+    document.getElementById('resultsSection').style.display = 'block';
+    document.getElementById('raceHeaderTitle').textContent =
+      `🎯 ${raceSummary.carrera_info || 'Pronóstico Calibrado'} [${effMode} · ${cond}]`;
+
+    const picksDiv = document.getElementById('picksContainer');
+    picksDiv.innerHTML = '';
+
+    if (eligible.length === 0) {
+      picksDiv.innerHTML = '<p class="small-note">No quedan ejemplares elegibles tras aplicar filtros de retiro/inactividad.</p>';
+    } else {
+      const first = eligible[0];
+      const second = eligible[1];
+      const third = eligible[2];
+      const diff = second ? (first.puntaje - second.puntaje) : 15;
+      const firstLabel = diff >= 7 ? '🔥 LÍNEA / BASE DEL MOTOR' : '🥇 PRIMERA MARCA';
+
+      picksDiv.innerHTML += buildPickCardHtml(first, firstLabel, 'var(--accent)', '');
+      if (second) {
+        picksDiv.innerHTML += buildPickCardHtml(second, '🥈 SEGUNDA MARCA / CONTENDIENTE', 'var(--accent-2)', 'second');
+      }
+      if (third) {
+        picksDiv.innerHTML += buildPickCardHtml(third, '⚡ TERCERA MARCA / DIVIDENDO', 'var(--warn)', 'longshot');
+      }
+
+      const topIds = new Set([first, second, third].filter(Boolean).map(h => String(h.numero)));
+      const batacazo = selectBatacazo(eligible, topIds);
+
+      if (batacazo) {
+        const t = getTrendMeta(batacazo);
+        const tags = [];
+        if (batacazo.tropiezo_encierro) tags.push('Tropiezo / Encierro');
+        if (batacazo.bajada_escondido) tags.push('Bajada de lote / Escondido');
+        if (batacazo.rivales_fuertes_previos) tags.push('Rivales fuertes previos');
+        if (batacazo.buenos_trabajos) tags.push('Buenos trabajos');
+
+        picksDiv.innerHTML += `
+          <div class="pick-box batacazo">
+            <div class="pick-tag" style="color:#fb923c;">💣 BATACAZO DETECTADO • Fuerza: ${batacazo.batacazo_fuerza}/100</div>
+            <div class="pick-name">#${batacazo.numero} ${batacazo.nombre} (${batacazo.puntaje} pts) <span class="trend-badge ${t.cls}">${t.badge}</span></div>
+            <div class="pick-meta">J: ${batacazo.jinete || '-'} | E: ${batacazo.entrenador || '-'}</div>
+            <div class="pick-reason">${batacazo.batacazo_motivo || batacazo.razon_tecnica}</div>
+            <div class="trend-obs ${t.cls}"><strong>Observación de tendencia:</strong> ${t.obs}</div>
+            ${tags.length ? `<div class="batacazo-pill">${tags.join(' • ')}</div>` : ''}
+          </div>
+        `;
+      } else {
+        picksDiv.innerHTML += `
+          <p class="small-note" style="margin-top:6px;">
+            💣 Selector de batacazo: sin señal de fuerza suficiente en esta carrera.
+          </p>
+        `;
+      }
+    }
+
+    const tableDiv = document.getElementById('horsesTable');
+    tableDiv.innerHTML = '';
+    extractedHorses.forEach((h, idx) => {
+      const isExcluded = h.retirado || h.descartado_paro;
+      const t = getTrendMeta(h);
+      const statusText = h.retirado
+        ? 'RETIRADO'
+        : (h.descartado_paro ? `DESCARTADO POR PARO (${h.dias_sin_correr ?? ''}d)` : `Pts: ${h.puntaje}`);
+
+      tableDiv.innerHTML += `
+        <div class="horse-row ${isExcluded ? 'excluded' : ''}">
+          <div>
+            <strong>#${h.numero} ${h.nombre}</strong>
+            ${!isExcluded ? `<span class="trend-badge ${t.cls}">${t.badge}</span>` : ''}<br>
+            <span class="small-note">${statusText} • J: ${h.jinete || '-'}</span>
+          </div>
+          <button class="scr-btn" onclick="toggleScratch(${idx})">
+            ${h.retirado ? 'Restaurar' : 'Retirar'}
+          </button>
+        </div>
+      `;
+    });
+  }
+</script>
+</body>
+</html>
